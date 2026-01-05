@@ -20,4 +20,14 @@ public class PveVersion {
     public String getConsole() {
         return console;
     }
+
+    @Override
+    public String toString() {
+        return "PveVersion{" +
+                "release='" + release + '\'' +
+                ", repoid='" + repoid + '\'' +
+                ", version='" + version + '\'' +
+                ", console='" + console + '\'' +
+                '}';
+    }
 }

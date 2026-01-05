@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import fr.freshperf.proxmox4j.SecurityConfig;
 import fr.freshperf.proxmox4j.throwable.ProxmoxAPIError;
 
@@ -14,6 +15,8 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -125,6 +128,10 @@ public class ProxmoxHttpClient {
         return executeRequest(builder, clazz);
     }
     
+    <T> T executeList(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
+        return executeRequestWithType(builder, typeToken);
+    }
+    
     private <T> T executeRequest(RequestBuilder builder, Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
         String url = buildUrl(builder.path, builder.params);
         
@@ -164,7 +171,9 @@ public class ProxmoxHttpClient {
                     url
                 );
             }
-            
+            System.out.println("|-----");
+            System.out.println("|UNEXTRACTED DATA :\n|" + parsedResponse);
+            System.out.println("|-----");
             JsonElement dataElement = extractDataFromResponse(parsedResponse);
             
             ResponseTransformer transformer = builder.transformer != null ? builder.transformer : defaultTransformer;
@@ -179,15 +188,87 @@ public class ProxmoxHttpClient {
             throw new ProxmoxAPIError("Network error: " + e.getMessage(), e);
         }
     }
+    
+    private <T> T executeRequestWithType(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
+        String url = buildUrl(builder.path, builder.params);
+        
+        try {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Authorization", "PVEAPIToken=" + apiToken)
+                    .header("Content-Type", "application/json");
+
+            switch (builder.method) {
+                case "GET" -> requestBuilder.GET();
+                case "POST" -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
+                case "PUT" -> requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
+                case "PATCH" -> requestBuilder.method("PATCH", HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
+                case "DELETE" -> requestBuilder.DELETE();
+            }
+
+            HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() >= 400) {
+                throw new ProxmoxAPIError(
+                    "HTTP request failed",
+                    response.statusCode(),
+                    response.body(),
+                    url
+                );
+            }
+            
+            JsonElement parsedResponse;
+            try {
+                parsedResponse = JsonParser.parseString(response.body());
+            } catch (JsonSyntaxException e) {
+                throw new ProxmoxAPIError(
+                    "Failed to parse JSON response: " + e.getMessage(),
+                    response.statusCode(),
+                    response.body(),
+                    url
+                );
+            }
+            System.out.println("|-----");
+            System.out.println("|UNEXTRACTED DATA :\n|" + parsedResponse);
+            System.out.println("|-----");
+            JsonElement dataElement = extractDataFromResponse(parsedResponse);
+            
+            Class<?> elementClass = extractElementClass(typeToken);
+            
+            ResponseTransformer transformer = builder.transformer != null ? builder.transformer : defaultTransformer;
+            JsonElement transformed = transformer.transform(dataElement, elementClass);
+            
+            return gson.fromJson(transformed, typeToken.getType());
+            
+        } catch (Exception e) {
+            if (e instanceof ProxmoxAPIError) {
+                throw (ProxmoxAPIError) e;
+            }
+            throw new ProxmoxAPIError("Network error: " + e.getMessage(), e);
+        }
+    }
+    
+    private Class<?> extractElementClass(TypeToken<?> typeToken) {
+        Type type = typeToken.getType();
+        
+        if (type instanceof ParameterizedType) {
+            ParameterizedType paramType = (ParameterizedType) type;
+            Type[] typeArgs = paramType.getActualTypeArguments();
+            
+            if (typeArgs.length > 0 && typeArgs[0] instanceof Class) {
+                return (Class<?>) typeArgs[0];
+            }
+        }
+        
+        return typeToken.getRawType();
+    }
 
     private JsonElement extractDataFromResponse(JsonElement jsonElement) {
         if (jsonElement.isJsonObject()) {
             JsonObject obj = jsonElement.getAsJsonObject();
             if (obj.has("data")) {
                 JsonElement data = obj.get("data");
-                if (data.isJsonArray() && data.getAsJsonArray().size() > 0) {
-                    return data.getAsJsonArray().get(0);
-                } else if (!data.isJsonNull()) {
+                if (!data.isJsonNull()) {
                     return data;
                 }
             }
@@ -248,6 +329,10 @@ public class ProxmoxHttpClient {
 
         public <T> T execute(Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
             return client.execute(this, clazz);
+        }
+        
+        public <T> T executeList(TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
+            return client.executeList(this, typeToken);
         }
     }
 }
