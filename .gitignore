@@ -45,3 +45,4 @@ bin/
 .idea/gradle.xml
 .idea/misc.xml
 .idea/vcs.xml
+src/main/java/fr/freshperf/proxmox4j/TEST.java
