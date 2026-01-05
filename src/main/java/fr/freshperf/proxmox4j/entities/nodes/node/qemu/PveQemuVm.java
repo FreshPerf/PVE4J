@@ -166,7 +166,6 @@ public record PveQemuVm(ProxmoxHttpClient client, String nodeName, int vmid) {
         if (options == null) {
             throw new IllegalArgumentException("options cannot be null");
         }
-        System.out.println(options.toParams());
         return new ProxmoxRequest<>(() ->
             client.post("nodes/" + nodeName + "/qemu/" + vmid + "/config")
                 .params(options.toParams())
@@ -184,6 +183,31 @@ public record PveQemuVm(ProxmoxHttpClient client, String nodeName, int vmid) {
         }
         return new ProxmoxRequest<>(() ->
             client.put("nodes/" + nodeName + "/qemu/" + vmid + "/config")
+                .params(options.toParams())
+                .transformer(new TaskResponseTransformer())
+                .execute(PveTask.class)
+        );
+    }
+
+    /**
+     * Gets firewall options for this VM
+     */
+    public ProxmoxRequest<PveQemuFirewallOptions> getFirewallOptions() {
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/firewall/options")
+                .execute(PveQemuFirewallOptions.class)
+        );
+    }
+
+    /**
+     * Updates firewall options (PUT, synchronous)
+     */
+    public ProxmoxRequest<PveTask> updateFirewallOptions(PveQemuFirewallOptionsUpdate options) {
+        if (options == null) {
+            throw new IllegalArgumentException("options cannot be null");
+        }
+        return new ProxmoxRequest<>(() ->
+            client.put("nodes/" + nodeName + "/qemu/" + vmid + "/firewall/options")
                 .params(options.toParams())
                 .transformer(new TaskResponseTransformer())
                 .execute(PveTask.class)
