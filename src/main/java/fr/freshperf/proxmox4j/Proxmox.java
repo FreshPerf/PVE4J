@@ -1,5 +1,7 @@
 package fr.freshperf.proxmox4j;
 
+import fr.freshperf.proxmox4j.entities.PveTask;
+import fr.freshperf.proxmox4j.entities.PveTaskStatus;
 import fr.freshperf.proxmox4j.entities.PveVersion;
 import fr.freshperf.proxmox4j.entities.access.PveAccess;
 import fr.freshperf.proxmox4j.entities.cluster.PveCluster;
@@ -57,6 +59,26 @@ public class Proxmox {
     public ProxmoxRequest<PveVersion> getVersion() {
         return new ProxmoxRequest<>(() -> {
             return httpClient.get("/version").execute(PveVersion.class);
+        });
+    }
+
+    public ProxmoxRequest<PveTaskStatus> getTaskStatus(PveTask task) {
+        if (task == null || task.getUpid() == null || task.getNode() == null) {
+            throw new IllegalArgumentException("Task and its UPID and node must not be null");
+        }
+        return new ProxmoxRequest<>(() -> {
+            return httpClient.get("nodes/" + task.getNode() + "/tasks/" + task.getUpid() + "/status")
+                    .execute(PveTaskStatus.class);
+        });
+    }
+
+    public ProxmoxRequest<PveTaskStatus> getTaskStatus(String node, String upid) {
+        if (node == null || upid == null) {
+            throw new IllegalArgumentException("Node and UPID must not be null");
+        }
+        return new ProxmoxRequest<>(() -> {
+            return httpClient.get("nodes/" + node + "/tasks/" + upid + "/status")
+                    .execute(PveTaskStatus.class);
         });
     }
 
