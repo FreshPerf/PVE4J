@@ -1,6 +1,8 @@
 package fr.freshperf.proxmox4j.entities.cluster;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.google.gson.reflect.TypeToken;
 import fr.freshperf.proxmox4j.entities.cluster.resources.PveClusterResources;
 import fr.freshperf.proxmox4j.request.ProxmoxHttpClient;
@@ -17,6 +19,10 @@ public record PveCluster(ProxmoxHttpClient httpClient) {
 
     public ProxmoxRequest<List<PveClusterStatus>> getStatus() {
         return new ProxmoxRequest<>(() -> httpClient.get("cluster/status").executeList(new TypeToken<List<PveClusterStatus>>(){}));
+    }
+
+    public ProxmoxRequest<Integer> getNextId() {
+        return new ProxmoxRequest<>(() -> httpClient.get("cluster/nextid").execute(Integer.class));
     }
 
     /**

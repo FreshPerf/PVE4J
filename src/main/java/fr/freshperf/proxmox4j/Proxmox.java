@@ -31,6 +31,10 @@ public class Proxmox {
         this.pveAccess = new PveAccess(httpClient);
     }
 
+    public ProxmoxHttpClient getHttpClient() {
+        return httpClient;
+    }
+
     /**
      * Creates a Proxmox API client with custom security configuration.
      * 

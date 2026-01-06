@@ -22,6 +22,13 @@ public record PveQemuVm(ProxmoxHttpClient client, String nodeName, int vmid) {
         );
     }
 
+    public ProxmoxRequest<PveQemuVmVncProxy> getVncProxy() {
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/vncproxy")
+                .execute(PveQemuVmVncProxy.class)
+        );
+    }
+
     /**
      * Gets the VM configuration
      */

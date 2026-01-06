@@ -38,6 +38,10 @@ public class ProxmoxHttpClient {
     private final Gson gson;
     private final ProxmoxResponseTransformer defaultTransformer;
 
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
     public ProxmoxHttpClient(String baseUrl, String apiToken) {
         this(baseUrl, apiToken, SecurityConfig.secure());
     }
