@@ -1,5 +1,3 @@
-# Proxmox4J
-
 <p align="center">
   <img width="1000" height="250" alt="Proxmox4J logo" src="https://github.com/user-attachments/assets/59989ad8-986d-49f5-8e80-3f1fa37fe158"/>
 </p>
