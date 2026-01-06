@@ -42,13 +42,13 @@ public class PveQemuConfigUpdateOptions {
     private Boolean force;
     private Boolean freeze;
     private String hookscript;
-    private String hostpci;
+    private final Map<Integer, String> hostpcis = new HashMap<>();
     private String hotplug;
     private String hugepages;
-    private String ide;
+    private final Map<Integer, String> ides = new HashMap<>();
     private String importWorkingStorage;
     private String intelTdx;
-    private String ipconfig;
+    private final Map<Integer, String> ipconfigs = new HashMap<>();
     private Boolean keephugepages;
     private String keyboard;
     private Boolean kvm;
@@ -60,21 +60,21 @@ public class PveQemuConfigUpdateOptions {
     private Integer migrateSpeed;
     private String name;
     private String nameserver;
-    private String net;
+    private final Map<Integer, String> nets = new HashMap<>();
     private Boolean numa;
-    private String numaConfig;
+    private final Map<Integer, String> numas = new HashMap<>();
     private Boolean onboot;
     private String ostype;
-    private String parallel;
+    private final Map<Integer, String> parallels = new HashMap<>();
     private Boolean protection;
     private Boolean reboot;
     private Boolean revert;
     private String rng0;
-    private String sata;
-    private String scsi;
+    private final Map<Integer, String> satas = new HashMap<>();
+    private final Map<Integer, String> scsis = new HashMap<>();
     private String scsihw;
     private String searchdomain;
-    private String serial;
+    private final Map<Integer, String> serials = new HashMap<>();
     private Integer shares;
     private Boolean skiplock;
     private String smbios1;
@@ -89,12 +89,12 @@ public class PveQemuConfigUpdateOptions {
     private Boolean tdf;
     private Boolean template;
     private String tpmstate0;
-    private String unused;
-    private String usb;
+    private final Map<Integer, String> unused = new HashMap<>();
+    private final Map<Integer, String> usbs = new HashMap<>();
     private Integer vcpus;
     private String vga;
-    private String virtio;
-    private String virtiofs;
+    private final Map<Integer, String> virtios = new HashMap<>();
+    private final Map<Integer, String> virtiofss = new HashMap<>();
     private String vmgenid;
     private String vmstatestorage;
     private String watchdog;
@@ -137,13 +137,13 @@ public class PveQemuConfigUpdateOptions {
         putBool(params, "force", force);
         putBool(params, "freeze", freeze);
         put(params, "hookscript", hookscript);
-        put(params, "hostpci0", hostpci); // caller sets suffix if needed
+        hostpcis.forEach((i, v) -> put(params, "hostpci" + i, v));
         put(params, "hotplug", hotplug);
         put(params, "hugepages", hugepages);
-        put(params, "ide0", ide); // caller sets suffix if needed
+        ides.forEach((i, v) -> put(params, "ide" + i, v));
         put(params, "import-working-storage", importWorkingStorage);
         put(params, "intel-tdx", intelTdx);
-        put(params, "ipconfig0", ipconfig); // caller sets suffix if needed
+        ipconfigs.forEach((i, v) -> put(params, "ipconfig" + i, v));
         putBool(params, "keephugepages", keephugepages);
         put(params, "keyboard", keyboard);
         putBool(params, "kvm", kvm);
@@ -155,21 +155,21 @@ public class PveQemuConfigUpdateOptions {
         putInt(params, "migrate_speed", migrateSpeed);
         put(params, "name", name);
         put(params, "nameserver", nameserver);
-        put(params, "net0", net); // caller sets suffix if needed
+        nets.forEach((i, v) -> put(params, "net" + i, v));
         putBool(params, "numa", numa);
-        put(params, "numa0", numaConfig); // caller sets suffix if needed
+        numas.forEach((i, v) -> put(params, "numa" + i, v));
         putBool(params, "onboot", onboot);
         put(params, "ostype", ostype);
-        put(params, "parallel0", parallel); // caller sets suffix if needed
+        parallels.forEach((i, v) -> put(params, "parallel" + i, v));
         putBool(params, "protection", protection);
         putBool(params, "reboot", reboot);
         putBool(params, "revert", revert);
         put(params, "rng0", rng0);
-        put(params, "sata0", sata); // caller sets suffix if needed
-        put(params, "scsi0", scsi); // caller sets suffix if needed
+        satas.forEach((i, v) -> put(params, "sata" + i, v));
+        scsis.forEach((i, v) -> put(params, "scsi" + i, v));
         put(params, "scsihw", scsihw);
         put(params, "searchdomain", searchdomain);
-        put(params, "serial0", serial); // caller sets suffix if needed
+        serials.forEach((i, v) -> put(params, "serial" + i, v));
         putInt(params, "shares", shares);
         putBool(params, "skiplock", skiplock);
         put(params, "smbios1", smbios1);
@@ -184,12 +184,12 @@ public class PveQemuConfigUpdateOptions {
         putBool(params, "tdf", tdf);
         putBool(params, "template", template);
         put(params, "tpmstate0", tpmstate0);
-        put(params, "unused0", unused); // caller sets suffix if needed
-        put(params, "usb0", usb); // caller sets suffix if needed
+        unused.forEach((i, v) -> put(params, "unused" + i, v));
+        usbs.forEach((i, v) -> put(params, "usb" + i, v));
         putInt(params, "vcpus", vcpus);
         put(params, "vga", vga);
-        put(params, "virtio0", virtio); // caller sets suffix if needed
-        put(params, "virtiofs0", virtiofs); // caller sets suffix if needed
+        virtios.forEach((i, v) -> put(params, "virtio" + i, v));
+        virtiofss.forEach((i, v) -> put(params, "virtiofs" + i, v));
         put(params, "vmgenid", vmgenid);
         put(params, "vmstatestorage", vmstatestorage);
         put(params, "watchdog", watchdog);
@@ -229,13 +229,13 @@ public class PveQemuConfigUpdateOptions {
     public PveQemuConfigUpdateOptions force(Boolean force) { this.force = force; return this; }
     public PveQemuConfigUpdateOptions freeze(Boolean freeze) { this.freeze = freeze; return this; }
     public PveQemuConfigUpdateOptions hookscript(String hookscript) { this.hookscript = hookscript; return this; }
-    public PveQemuConfigUpdateOptions hostpci(String hostpci) { this.hostpci = hostpci; return this; }
+    public PveQemuConfigUpdateOptions hostpci(int index, String hostpci) { putIndexed(hostpcis, index, hostpci); return this; }
     public PveQemuConfigUpdateOptions hotplug(String hotplug) { this.hotplug = validateHotplug(hotplug); return this; }
     public PveQemuConfigUpdateOptions hugepages(String hugepages) { this.hugepages = hugepages; return this; }
-    public PveQemuConfigUpdateOptions ide(String ide) { this.ide = ide; return this; }
+    public PveQemuConfigUpdateOptions ide(int index, String ide) { putIndexed(ides, index, ide); return this; }
     public PveQemuConfigUpdateOptions importWorkingStorage(String importWorkingStorage) { this.importWorkingStorage = importWorkingStorage; return this; }
     public PveQemuConfigUpdateOptions intelTdx(String intelTdx) { this.intelTdx = intelTdx; return this; }
-    public PveQemuConfigUpdateOptions ipconfig(String ipconfig) { this.ipconfig = ipconfig; return this; }
+    public PveQemuConfigUpdateOptions ipconfig(int index, String ipconfig) { putIndexed(ipconfigs, index, ipconfig); return this; }
     public PveQemuConfigUpdateOptions keephugepages(Boolean keephugepages) { this.keephugepages = keephugepages; return this; }
     public PveQemuConfigUpdateOptions keyboard(String keyboard) { this.keyboard = keyboard; return this; }
     public PveQemuConfigUpdateOptions kvm(Boolean kvm) { this.kvm = kvm; return this; }
@@ -247,21 +247,21 @@ public class PveQemuConfigUpdateOptions {
     public PveQemuConfigUpdateOptions migrateSpeed(Integer migrateSpeed) { this.migrateSpeed = migrateSpeed; return this; }
     public PveQemuConfigUpdateOptions name(String name) { this.name = name; return this; }
     public PveQemuConfigUpdateOptions nameserver(String nameserver) { this.nameserver = nameserver; return this; }
-    public PveQemuConfigUpdateOptions net(String net) { this.net = net; return this; }
+    public PveQemuConfigUpdateOptions net(int index, String net) { putIndexed(nets, index, net); return this; }
     public PveQemuConfigUpdateOptions numa(Boolean numa) { this.numa = numa; return this; }
-    public PveQemuConfigUpdateOptions numaConfig(String numaConfig) { this.numaConfig = numaConfig; return this; }
+    public PveQemuConfigUpdateOptions numaConfig(int index, String numaConfig) { putIndexed(numas, index, numaConfig); return this; }
     public PveQemuConfigUpdateOptions onboot(Boolean onboot) { this.onboot = onboot; return this; }
     public PveQemuConfigUpdateOptions ostype(String ostype) { this.ostype = ostype; return this; }
-    public PveQemuConfigUpdateOptions parallel(String parallel) { this.parallel = parallel; return this; }
+    public PveQemuConfigUpdateOptions parallel(int index, String parallel) { putIndexed(parallels, index, parallel); return this; }
     public PveQemuConfigUpdateOptions protection(Boolean protection) { this.protection = protection; return this; }
     public PveQemuConfigUpdateOptions reboot(Boolean reboot) { this.reboot = reboot; return this; }
     public PveQemuConfigUpdateOptions revert(Boolean revert) { this.revert = revert; return this; }
     public PveQemuConfigUpdateOptions rng0(String rng0) { this.rng0 = rng0; return this; }
-    public PveQemuConfigUpdateOptions sata(String sata) { this.sata = sata; return this; }
-    public PveQemuConfigUpdateOptions scsi(String scsi) { this.scsi = scsi; return this; }
+    public PveQemuConfigUpdateOptions sata(int index, String sata) { putIndexed(satas, index, sata); return this; }
+    public PveQemuConfigUpdateOptions scsi(int index, String scsi) { putIndexed(scsis, index, scsi); return this; }
     public PveQemuConfigUpdateOptions scsihw(String scsihw) { this.scsihw = scsihw; return this; }
     public PveQemuConfigUpdateOptions searchdomain(String searchdomain) { this.searchdomain = searchdomain; return this; }
-    public PveQemuConfigUpdateOptions serial(String serial) { this.serial = serial; return this; }
+    public PveQemuConfigUpdateOptions serial(int index, String serial) { putIndexed(serials, index, serial); return this; }
     public PveQemuConfigUpdateOptions shares(Integer shares) { this.shares = shares; return this; }
     public PveQemuConfigUpdateOptions skiplock(Boolean skiplock) { this.skiplock = skiplock; return this; }
     public PveQemuConfigUpdateOptions smbios1(String smbios1) { this.smbios1 = smbios1; return this; }
@@ -276,12 +276,12 @@ public class PveQemuConfigUpdateOptions {
     public PveQemuConfigUpdateOptions tdf(Boolean tdf) { this.tdf = tdf; return this; }
     public PveQemuConfigUpdateOptions template(Boolean template) { this.template = template; return this; }
     public PveQemuConfigUpdateOptions tpmstate0(String tpmstate0) { this.tpmstate0 = tpmstate0; return this; }
-    public PveQemuConfigUpdateOptions unused(String unused) { this.unused = unused; return this; }
-    public PveQemuConfigUpdateOptions usb(String usb) { this.usb = usb; return this; }
+    public PveQemuConfigUpdateOptions unused(int index, String unused) { putIndexed(this.unused, index, unused); return this; }
+    public PveQemuConfigUpdateOptions usb(int index, String usb) { putIndexed(usbs, index, usb); return this; }
     public PveQemuConfigUpdateOptions vcpus(Integer vcpus) { this.vcpus = vcpus; return this; }
     public PveQemuConfigUpdateOptions vga(String vga) { this.vga = vga; return this; }
-    public PveQemuConfigUpdateOptions virtio(String virtio) { this.virtio = virtio; return this; }
-    public PveQemuConfigUpdateOptions virtiofs(String virtiofs) { this.virtiofs = virtiofs; return this; }
+    public PveQemuConfigUpdateOptions virtio(int index, String virtio) { putIndexed(virtios, index, virtio); return this; }
+    public PveQemuConfigUpdateOptions virtiofs(int index, String virtiofs) { putIndexed(virtiofss, index, virtiofs); return this; }
     public PveQemuConfigUpdateOptions vmgenid(String vmgenid) { this.vmgenid = vmgenid; return this; }
     public PveQemuConfigUpdateOptions vmstatestorage(String vmstatestorage) { this.vmstatestorage = vmstatestorage; return this; }
     public PveQemuConfigUpdateOptions watchdog(String watchdog) { this.watchdog = watchdog; return this; }
@@ -325,6 +325,15 @@ public class PveQemuConfigUpdateOptions {
             }
         }
         return String.join(",", parts);
+    }
+
+    private static void putIndexed(Map<Integer, String> target, int index, String value) {
+        if (index < 0) {
+            throw new IllegalArgumentException("index must be >= 0");
+        }
+        if (value != null && !value.isBlank()) {
+            target.put(index, value);
+        }
     }
 }
 
