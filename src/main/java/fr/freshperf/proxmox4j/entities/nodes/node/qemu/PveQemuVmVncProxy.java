@@ -56,8 +56,8 @@ public class PveQemuVmVncProxy {
         this.port = port;
     }
 
-    public String getWebsocketUrl(Proxmox proxmox, String nodeName, int vmid) {
-        return ProxmoxApiBaseUrlBuilder.buildWssUrl(proxmox, nodeName, vmid, port, ticket);
+    public String getConsoleUrl(Proxmox proxmox, String nodeName, int vmid) {
+        return ProxmoxApiBaseUrlBuilder.buildConsoleUrl(proxmox, nodeName, vmid, ticket);
     }
 
     @Override
