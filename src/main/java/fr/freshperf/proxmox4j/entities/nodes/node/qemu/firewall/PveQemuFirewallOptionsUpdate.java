@@ -1,5 +1,7 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu.firewall;
 
+import fr.freshperf.proxmox4j.util.ParamsHelpers;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,18 +29,18 @@ public class PveQemuFirewallOptionsUpdate {
 
     public Map<String, Object> toParams() {
         Map<String, Object> params = new HashMap<>();
-        putBool(params, "dhcp", dhcp);
-        putBool(params, "enable", enable);
-        putBool(params, "ipfilter", ipfilter);
-        put(params, "log_level_in", logLevelIn);
-        put(params, "log_level_out", logLevelOut);
-        putBool(params, "macfilter", macfilter);
-        putBool(params, "ndp", ndp);
-        put(params, "policy_in", policyIn);
-        put(params, "policy_out", policyOut);
-        putBool(params, "radv", radv);
-        put(params, "digest", digest);
-        put(params, "delete", delete);
+        ParamsHelpers.putBool(params, "dhcp", dhcp);
+        ParamsHelpers.putBool(params, "enable", enable);
+        ParamsHelpers.putBool(params, "ipfilter", ipfilter);
+        ParamsHelpers.put(params, "log_level_in", logLevelIn);
+        ParamsHelpers.put(params, "log_level_out", logLevelOut);
+        ParamsHelpers.putBool(params, "macfilter", macfilter);
+        ParamsHelpers.putBool(params, "ndp", ndp);
+        ParamsHelpers.put(params, "policy_in", policyIn);
+        ParamsHelpers.put(params, "policy_out", policyOut);
+        ParamsHelpers.putBool(params, "radv", radv);
+        ParamsHelpers.put(params, "digest", digest);
+        ParamsHelpers.put(params, "delete", delete);
         return params;
     }
 
@@ -55,15 +57,4 @@ public class PveQemuFirewallOptionsUpdate {
     public PveQemuFirewallOptionsUpdate digest(String digest) { this.digest = digest; return this; }
     public PveQemuFirewallOptionsUpdate delete(String delete) { this.delete = delete; return this; }
 
-    private static void put(Map<String, Object> params, String key, String value) {
-        if (value != null && !value.isBlank()) {
-            params.put(key, value);
-        }
-    }
-
-    private static void putBool(Map<String, Object> params, String key, Boolean value) {
-        if (value != null) {
-            params.put(key, value ? "1" : "0");
-        }
-    }
 }

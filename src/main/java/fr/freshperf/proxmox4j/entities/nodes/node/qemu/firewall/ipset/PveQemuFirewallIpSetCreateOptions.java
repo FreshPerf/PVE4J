@@ -1,5 +1,7 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu.firewall.ipset;
 
+import fr.freshperf.proxmox4j.util.ParamsHelpers;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -20,19 +22,13 @@ public class PveQemuFirewallIpSetCreateOptions {
     public Map<String, Object> toParams(String name) {
         Map<String, Object> params = new HashMap<>();
         params.put("name", name);
-        put(params, "comment", comment);
-        put(params, "digest", digest);
-        put(params, "rename", rename);
+        ParamsHelpers.put(params, "comment", comment);
+        ParamsHelpers.put(params, "digest", digest);
+        ParamsHelpers.put(params, "rename", rename);
         return params;
     }
 
     public PveQemuFirewallIpSetCreateOptions comment(String comment) { this.comment = comment; return this; }
     public PveQemuFirewallIpSetCreateOptions digest(String digest) { this.digest = digest; return this; }
     public PveQemuFirewallIpSetCreateOptions rename(String rename) { this.rename = rename; return this; }
-
-    private static void put(Map<String, Object> params, String key, String value) {
-        if (value != null && !value.isBlank()) {
-            params.put(key, value);
-        }
-    }
 }
