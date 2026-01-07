@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 public class ProxmoxHttpClient {
 
     private final String apiToken;
+    private final String ticket;
+    private final String csrfToken;
     private final HttpClient client;
     private final String baseUrl;
     private final Gson gson;
@@ -49,7 +51,24 @@ public class ProxmoxHttpClient {
     public ProxmoxHttpClient(String baseUrl, String apiToken, SecurityConfig securityConfig) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         this.apiToken = apiToken;
+        this.ticket = null;
+        this.csrfToken = null;
+        initializeClient(securityConfig);
+    }
 
+    private ProxmoxHttpClient(String baseUrl, SecurityConfig securityConfig, boolean unauthenticated) {
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+        this.apiToken = null;
+        this.ticket = null;
+        this.csrfToken = null;
+        initializeClient(securityConfig);
+    }
+
+    static ProxmoxHttpClient createUnauthenticated(String baseUrl, SecurityConfig securityConfig) {
+        return new ProxmoxHttpClient(baseUrl, securityConfig, true);
+    }
+
+    private void initializeClient(SecurityConfig securityConfig) {
         HttpClient.Builder clientBuilder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10));
@@ -107,6 +126,14 @@ public class ProxmoxHttpClient {
         this.defaultTransformer = new ProxmoxResponseTransformer();
     }
 
+    public ProxmoxHttpClient(String baseUrl, String ticket, String csrfToken, SecurityConfig securityConfig) {
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+        this.apiToken = null;
+        this.ticket = ticket;
+        this.csrfToken = csrfToken;
+        initializeClient(securityConfig);
+    }
+
 
     public RequestBuilder get(String path) {
         return new RequestBuilder(this, "GET", path);
@@ -142,8 +169,17 @@ public class ProxmoxHttpClient {
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
-                    .header("Authorization", "PVEAPIToken=" + apiToken)
                     .header("Content-Type", "application/json");
+            
+            if (apiToken != null) {
+                requestBuilder.header("Authorization", "PVEAPIToken=" + apiToken);
+            } else if (ticket != null) {
+                requestBuilder.header("Cookie", "PVEAuthCookie=" + ticket);
+                if (csrfToken != null && (builder.method.equals("POST") || builder.method.equals("PUT") || 
+                    builder.method.equals("PATCH") || builder.method.equals("DELETE"))) {
+                    requestBuilder.header("CSRFPreventionToken", csrfToken);
+                }
+            }
 
             switch (builder.method) {
                 case "GET" -> requestBuilder.GET();
@@ -199,8 +235,17 @@ public class ProxmoxHttpClient {
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
-                    .header("Authorization", "PVEAPIToken=" + apiToken)
                     .header("Content-Type", "application/json");
+            
+            if (apiToken != null) {
+                requestBuilder.header("Authorization", "PVEAPIToken=" + apiToken);
+            } else if (ticket != null) {
+                requestBuilder.header("Cookie", "PVEAuthCookie=" + ticket);
+                if (csrfToken != null && (builder.method.equals("POST") || builder.method.equals("PUT") || 
+                    builder.method.equals("PATCH") || builder.method.equals("DELETE"))) {
+                    requestBuilder.header("CSRFPreventionToken", csrfToken);
+                }
+            }
 
             switch (builder.method) {
                 case "GET" -> requestBuilder.GET();
