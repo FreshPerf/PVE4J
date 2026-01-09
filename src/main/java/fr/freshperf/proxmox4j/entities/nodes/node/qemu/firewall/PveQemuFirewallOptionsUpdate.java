@@ -1,14 +1,14 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu.firewall;
 
+import fr.freshperf.proxmox4j.entities.options.ParamsConvertible;
 import fr.freshperf.proxmox4j.util.ParamsHelpers;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Options for updating QEMU firewall options (PUT /nodes/{node}/qemu/{vmid}/firewall/options).
  */
-public class PveQemuFirewallOptionsUpdate {
+public class PveQemuFirewallOptionsUpdate implements ParamsConvertible {
 
     private Boolean dhcp;
     private Boolean enable;
@@ -27,8 +27,8 @@ public class PveQemuFirewallOptionsUpdate {
         return new PveQemuFirewallOptionsUpdate();
     }
 
-    public Map<String, Object> toParams() {
-        Map<String, Object> params = new HashMap<>();
+    @Override
+    public void populateParams(Map<String, Object> params) {
         ParamsHelpers.putBool(params, "dhcp", dhcp);
         ParamsHelpers.putBool(params, "enable", enable);
         ParamsHelpers.putBool(params, "ipfilter", ipfilter);
@@ -41,7 +41,6 @@ public class PveQemuFirewallOptionsUpdate {
         ParamsHelpers.putBool(params, "radv", radv);
         ParamsHelpers.put(params, "digest", digest);
         ParamsHelpers.put(params, "delete", delete);
-        return params;
     }
 
     public PveQemuFirewallOptionsUpdate dhcp(Boolean dhcp) { this.dhcp = dhcp; return this; }

@@ -1,5 +1,6 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
+import fr.freshperf.proxmox4j.entities.options.ParamsConvertible;
 import fr.freshperf.proxmox4j.util.ParamsHelpers;
 
 import java.util.HashMap;
@@ -9,7 +10,7 @@ import java.util.Set;
 /**
  * Options for updating a QEMU VM configuration (POST/PUT /nodes/{node}/qemu/{vmid}/config).
  */
-public class PveQemuConfigUpdateOptions {
+public class PveQemuConfigUpdateOptions implements ParamsConvertible {
 
     private static final Set<String> ALLOWED_HOTPLUG = Set.of("0", "1", "disk", "network", "usb", "cpu", "memory", "cloudinit");
 
@@ -105,9 +106,8 @@ public class PveQemuConfigUpdateOptions {
         return new PveQemuConfigUpdateOptions();
     }
 
-    public Map<String, Object> toParams() {
-        Map<String, Object> params = new HashMap<>();
-
+    @Override
+    public void populateParams(Map<String, Object> params) {
         ParamsHelpers.putBool(params, "acpi", acpi);
         ParamsHelpers.put(params, "affinity", affinity);
         ParamsHelpers.put(params, "agent", agent);
@@ -195,8 +195,6 @@ public class PveQemuConfigUpdateOptions {
         ParamsHelpers.put(params, "vmgenid", vmgenid);
         ParamsHelpers.put(params, "vmstatestorage", vmstatestorage);
         ParamsHelpers.put(params, "watchdog", watchdog);
-
-        return params;
     }
 
     // Builder methods

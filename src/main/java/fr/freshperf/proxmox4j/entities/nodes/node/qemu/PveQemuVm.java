@@ -152,9 +152,11 @@ public class PveQemuVm {
             throw new IllegalArgumentException("newVmid must be >= 100");
         }
 
+        PveQemuCloneOptions effectiveOptions = options != null ? options : PveQemuCloneOptions.builder();
+        
         return new ProxmoxRequest<>(() ->
             client.post("nodes/" + nodeName + "/qemu/" + vmid + "/clone")
-                .params(PveQemuCloneOptions.toParams(newVmid, options))
+                .params(effectiveOptions.toParams(newVmid))
                 .transformer(new TaskResponseTransformer())
                 .execute(PveTask.class)
         );
@@ -172,9 +174,11 @@ public class PveQemuVm {
      * Resizes a disk of the VM with optional parameters.
      */
     public ProxmoxRequest<PveTask> resize(String disk, String size, PveQemuResizeOptions options) {
+        PveQemuResizeOptions effectiveOptions = options != null ? options : PveQemuResizeOptions.builder();
+        
         return new ProxmoxRequest<>(() ->
             client.put("nodes/" + nodeName + "/qemu/" + vmid + "/resize")
-                .params(PveQemuResizeOptions.toParams(disk, size, options))
+                .params(effectiveOptions.toParams(disk, size))
                 .transformer(new TaskResponseTransformer())
                 .execute(PveTask.class)
         );

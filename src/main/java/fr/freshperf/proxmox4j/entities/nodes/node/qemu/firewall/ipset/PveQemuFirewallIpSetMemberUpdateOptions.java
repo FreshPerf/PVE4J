@@ -1,14 +1,14 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu.firewall.ipset;
 
+import fr.freshperf.proxmox4j.entities.options.ParameterizedParamsConvertible;
 import fr.freshperf.proxmox4j.util.ParamsHelpers;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Options for updating a firewall IP set member (/firewall/ipset/{name}/{cidr}, PUT).
  */
-public class PveQemuFirewallIpSetMemberUpdateOptions {
+public class PveQemuFirewallIpSetMemberUpdateOptions implements ParameterizedParamsConvertible<String> {
 
     private String comment;
     private Boolean nomatch;
@@ -18,13 +18,16 @@ public class PveQemuFirewallIpSetMemberUpdateOptions {
         return new PveQemuFirewallIpSetMemberUpdateOptions();
     }
 
-    public Map<String, Object> toParams(String cidr) {
-        Map<String, Object> params = new HashMap<>();
+    @Override
+    public void addRequiredParam(Map<String, Object> params, String cidr) {
         params.put("cidr", cidr);
+    }
+
+    @Override
+    public void populateParams(Map<String, Object> params) {
         ParamsHelpers.put(params, "comment", comment);
         ParamsHelpers.putBool(params, "nomatch", nomatch);
         ParamsHelpers.put(params, "digest", digest);
-        return params;
     }
 
     public PveQemuFirewallIpSetMemberUpdateOptions comment(String comment) { this.comment = comment; return this; }
@@ -32,3 +35,4 @@ public class PveQemuFirewallIpSetMemberUpdateOptions {
     public PveQemuFirewallIpSetMemberUpdateOptions digest(String digest) { this.digest = digest; return this; }
 
 }
+

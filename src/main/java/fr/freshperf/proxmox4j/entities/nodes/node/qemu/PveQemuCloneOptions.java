@@ -1,13 +1,14 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
-import java.util.HashMap;
+import fr.freshperf.proxmox4j.entities.options.ParameterizedParamsConvertible;
+import fr.freshperf.proxmox4j.util.ParamsHelpers;
+
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Options for cloning a QEMU VM/template.
  */
-public class PveQemuCloneOptions {
+public class PveQemuCloneOptions implements ParameterizedParamsConvertible<Integer> {
 
     private String name;
     private String description;
@@ -21,6 +22,24 @@ public class PveQemuCloneOptions {
 
     public static PveQemuCloneOptions builder() {
         return new PveQemuCloneOptions();
+    }
+
+    @Override
+    public void addRequiredParam(Map<String, Object> params, Integer newVmid) {
+        params.put("newid", String.valueOf(newVmid));
+    }
+
+    @Override
+    public void populateParams(Map<String, Object> params) {
+        ParamsHelpers.put(params, "name", name);
+        ParamsHelpers.put(params, "description", description);
+        ParamsHelpers.put(params, "target", target);
+        ParamsHelpers.put(params, "storage", storage);
+        ParamsHelpers.put(params, "pool", pool);
+        ParamsHelpers.put(params, "snapname", snapname);
+        ParamsHelpers.put(params, "format", format);
+        ParamsHelpers.putInt(params, "bwlimit", bwlimit);
+        ParamsHelpers.putBool(params, "full", full);
     }
 
     public PveQemuCloneOptions name(String name) {
@@ -73,43 +92,5 @@ public class PveQemuCloneOptions {
         this.full = full;
         return this;
     }
-
-    public static Map<String, Object> toParams(int newVmid, PveQemuCloneOptions options) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("newid", String.valueOf(newVmid));
-
-        if (options == null) {
-            return params;
-        }
-
-        if (options.name != null) {
-            params.put("name", options.name);
-        }
-        if (options.description != null) {
-            params.put("description", options.description);
-        }
-        if (options.target != null) {
-            params.put("target", options.target);
-        }
-        if (options.storage != null) {
-            params.put("storage", options.storage);
-        }
-        if (options.pool != null) {
-            params.put("pool", options.pool);
-        }
-        if (options.snapname != null) {
-            params.put("snapname", options.snapname);
-        }
-        if (options.format != null) {
-            params.put("format", options.format);
-        }
-        if (options.bwlimit != null) {
-            params.put("bwlimit", String.valueOf(options.bwlimit));
-        }
-        if (options.full != null) {
-            params.put("full", options.full ? "1" : "0");
-        }
-
-        return params;
-    }
 }
+

@@ -1,15 +1,16 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
-import java.util.HashMap;
+import fr.freshperf.proxmox4j.entities.options.TwoParamsConvertible;
+import fr.freshperf.proxmox4j.util.ParamsHelpers;
+
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * Options for resizing a QEMU VM disk.
  */
-public class PveQemuResizeOptions {
+public class PveQemuResizeOptions implements TwoParamsConvertible<String, String> {
 
     private static final Set<String> ALLOWED_DISKS = Set.of(
             "ide0", "ide1", "ide2", "ide3",
@@ -32,6 +33,20 @@ public class PveQemuResizeOptions {
         return new PveQemuResizeOptions();
     }
 
+    @Override
+    public void addRequiredParams(Map<String, Object> params, String disk, String size) {
+        validateDisk(disk);
+        validateSize(size);
+        params.put("disk", disk);
+        params.put("size", size);
+    }
+
+    @Override
+    public void populateParams(Map<String, Object> params) {
+        ParamsHelpers.put(params, "digest", digest);
+        ParamsHelpers.putBool(params, "skiplock", skiplock);
+    }
+
     public PveQemuResizeOptions digest(String digest) {
         this.digest = digest;
         return this;
@@ -40,28 +55,6 @@ public class PveQemuResizeOptions {
     public PveQemuResizeOptions skiplock(Boolean skiplock) {
         this.skiplock = skiplock;
         return this;
-    }
-
-    public static Map<String, Object> toParams(String disk, String size, PveQemuResizeOptions options) {
-        validateDisk(disk);
-        validateSize(size);
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("disk", disk);
-        params.put("size", size);
-
-        if (options == null) {
-            return params;
-        }
-
-        if (options.digest != null && !options.digest.isBlank()) {
-            params.put("digest", options.digest);
-        }
-        if (options.skiplock != null) {
-            params.put("skiplock", options.skiplock ? "1" : "0");
-        }
-
-        return params;
     }
 
     private static void validateDisk(String disk) {
@@ -82,4 +75,5 @@ public class PveQemuResizeOptions {
         }
     }
 }
+
 
