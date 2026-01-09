@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
-  <a href="#"><img src="https://img.shields.io/badge/release-0.1.0-green" alt="Maven Central"></a>
+  <a href="https://central.sonatype.com/artifact/fr.freshperf/Proxmox4J"><img src="https://img.shields.io/badge/release-0.1.1-green" alt="Maven Central"></a>
   <a href="https://github.com/FreshPerf/Proxmox4J/issues"><img src="https://img.shields.io/github/issues/FreshPerf/Proxmox4J" alt="GitHub Issues"></a>
   <a href="https://github.com/FreshPerf/Proxmox4J/stargazers"><img src="https://img.shields.io/github/stars/FreshPerf/Proxmox4J" alt="GitHub Stars"></a>
   <a href="https://freshperf.fr"><img src="https://img.shields.io/badge/FreshPerf-v1.5-blue" alt="FreshPerf"></a>
@@ -110,7 +110,7 @@ Add the dependency:
 <dependency>
     <groupId>fr.freshperf</groupId>
     <artifactId>Proxmox4J</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 

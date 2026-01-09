@@ -1,16 +1,16 @@
 plugins {
     id 'java'
-    id 'maven-publish'
+    id "com.vanniktech.maven.publish" version "0.35.0"
 }
 
 group = 'fr.freshperf'
-version = '0.1.0'
+version = '0.1.1'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -21,8 +21,7 @@ repositories {
 dependencies {
     implementation 'com.google.code.gson:gson:2.13.2'
     implementation 'org.java-websocket:Java-WebSocket:1.5.7'
-    
-    // Testing dependencies
+
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.1'
@@ -32,22 +31,43 @@ dependencies {
     testImplementation 'org.assertj:assertj-core:3.24.2'
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            pom {
-                name = 'Proxmox4J'
-                description = 'Interact with Proxmox and Java the right way.'
-                url = 'https://freshperf.fr'
-                licenses {
-                    license {
-                        name = 'GNU General Public License v3.0'
-                        url = 'https://raw.githubusercontent.com/FreshPerf/Proxmox4J/refs/heads/main/LICENSE'
-                    }
-                }
+mavenPublishing {
+    publishToMavenCentral()
+
+    pom {
+        name = 'Proxmox4J'
+        description = 'Interact with Proxmox and Java the right way.'
+        url = 'https://freshperf.fr'
+        licenses {
+            license {
+                name = 'GNU General Public License v3.0'
+                url = 'https://raw.githubusercontent.com/FreshPerf/Proxmox4J/refs/heads/main/LICENSE'
             }
         }
+        developers {
+            developer {
+                id = "fyz"
+                name = "Thibeau Benet"
+                url = "https://github.com/w8fyz"
+            }
+            developer {
+                id = "maxwgamer"
+                name = "Maxime Reperant"
+                url = "https://github.com/maxwgamer"
+            }
+        }
+        scm {
+            url = "https://github.com/FreshPerf/Proxmox4J"
+            connection = "scm:git:git://github.com/FreshPerf/Proxmox4J.git"
+            developerConnection = "scm:git:ssh://git@github.com/FreshPerf/Proxmox4J.git"
+        }
     }
+
+    signAllPublications()
+}
+
+signing {
+    useGpgCmd()
 }
 
 test {
