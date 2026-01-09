@@ -12,6 +12,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 
+/**
+ * Default response transformer that handles Proxmox API response formatting.
+ * Converts numeric boolean values (0/1) to actual booleans based on target class fields.
+ */
 public class ProxmoxResponseTransformer implements ResponseTransformer {
 
     private static final ConcurrentHashMap<Class<?>, ClassFieldCache> CLASS_CACHE = new ConcurrentHashMap<>();
@@ -34,6 +38,13 @@ public class ProxmoxResponseTransformer implements ResponseTransformer {
         }
     }
 
+    /**
+     * Transforms JSON elements, converting numeric booleans to actual booleans.
+     *
+     * @param jsonElement the JSON element to transform
+     * @param targetClass the target class for field type detection
+     * @return the transformed JSON element
+     */
     @Override
     public JsonElement transform(JsonElement jsonElement, Class<?> targetClass) {
         if (jsonElement == null || jsonElement.isJsonNull()) {

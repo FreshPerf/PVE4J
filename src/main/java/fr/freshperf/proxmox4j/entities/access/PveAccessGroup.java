@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.access;
 
+/**
+ * Represents a Proxmox user group.
+ */
 public class PveAccessGroup {
 
     private String groupid, comment;

@@ -12,6 +12,10 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 import fr.freshperf.proxmox4j.throwable.ProxmoxAPIError;
 import fr.freshperf.proxmox4j.util.ProxmoxApiBaseUrlBuilder;
 
+/**
+ * Main entry point for the Proxmox VE API client.
+ * Provides access to cluster, nodes, and access management endpoints.
+ */
 public class Proxmox {
 
     private final ProxmoxHttpClient httpClient;
@@ -20,6 +24,14 @@ public class Proxmox {
     private final PveNodes pveNodes;
     private final PveAccess pveAccess;
 
+    /**
+     * Creates a new Proxmox client with API key authentication.
+     *
+     * @param host           the Proxmox host address
+     * @param port           the API port (usually 8006)
+     * @param apikey         the API token for authentication
+     * @param securityConfig SSL/TLS security configuration
+     */
     private Proxmox(String host, int port, String apikey, SecurityConfig securityConfig) {
         this.httpClient = new ProxmoxHttpClient(
                 ProxmoxApiBaseUrlBuilder.buildApiBaseUrl(host, port)
@@ -30,6 +42,11 @@ public class Proxmox {
         this.pveAccess = new PveAccess(httpClient);
     }
 
+    /**
+     * Creates a new Proxmox client with an existing HTTP client.
+     *
+     * @param httpClient the pre-configured HTTP client
+     */
     private Proxmox(ProxmoxHttpClient httpClient) {
         this.httpClient = httpClient;
         this.pveCluster = new PveCluster(httpClient);
@@ -37,6 +54,11 @@ public class Proxmox {
         this.pveAccess = new PveAccess(httpClient);
     }
 
+    /**
+     * Returns the underlying HTTP client.
+     *
+     * @return the HTTP client used for API requests
+     */
     public ProxmoxHttpClient getHttpClient() {
         return httpClient;
     }
@@ -130,12 +152,24 @@ public class Proxmox {
         return createWithPassword(host, port, username, password, "pam", SecurityConfig.secure());
     }
 
+    /**
+     * Gets the Proxmox VE version information.
+     *
+     * @return a request that returns the Proxmox version details
+     */
     public ProxmoxRequest<PveVersion> getVersion() {
         return new ProxmoxRequest<>(() -> {
             return httpClient.get("/version").execute(PveVersion.class);
         });
     }
 
+    /**
+     * Gets the status of a task.
+     *
+     * @param task the task to check (must have valid UPID and node)
+     * @return a request that returns the task status
+     * @throws IllegalArgumentException if task, UPID, or node is null
+     */
     public ProxmoxRequest<PveTaskStatus> getTaskStatus(PveTask task) {
         if (task == null || task.getUpid() == null || task.getNode() == null) {
             throw new IllegalArgumentException("Task and its UPID and node must not be null");
@@ -146,6 +180,14 @@ public class Proxmox {
         });
     }
 
+    /**
+     * Gets the status of a task by node and UPID.
+     *
+     * @param node the node name where the task is running
+     * @param upid the unique process ID of the task
+     * @return a request that returns the task status
+     * @throws IllegalArgumentException if node or UPID is null
+     */
     public ProxmoxRequest<PveTaskStatus> getTaskStatus(String node, String upid) {
         if (node == null || upid == null) {
             throw new IllegalArgumentException("Node and UPID must not be null");
@@ -156,14 +198,29 @@ public class Proxmox {
         });
     }
 
+    /**
+     * Gets the cluster management interface.
+     *
+     * @return the cluster API facade
+     */
     public PveCluster getCluster() {
         return pveCluster;
     }
 
+    /**
+     * Gets the nodes management interface.
+     *
+     * @return the nodes API facade
+     */
     public PveNodes getNodes() {
         return pveNodes;
     }
 
+    /**
+     * Gets the access/authentication management interface.
+     *
+     * @return the access API facade
+     */
     public PveAccess getAccess() {
         return pveAccess;
     }

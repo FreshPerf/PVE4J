@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.storage;
 
+/**
+ * Represents storage summary information in the storage list.
+ */
 public class PveStorageIndex {
 
     private String storage, type, content;

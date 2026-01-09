@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
+/**
+ * Represents High Availability configuration for a QEMU VM.
+ */
 public class PveQemuHa {
 
     private int managed;

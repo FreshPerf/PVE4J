@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
+/**
+ * Represents the current status of a QEMU VM.
+ */
 public class PveQemuStatus {
 
     private int vmid, cpus, pid;

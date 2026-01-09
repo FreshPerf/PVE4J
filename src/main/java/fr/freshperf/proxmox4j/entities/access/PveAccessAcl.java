@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.access;
 
+/**
+ * Represents a Proxmox Access Control List entry.
+ */
 public class PveAccessAcl {
 
     private String path, type, ugid, roleid;

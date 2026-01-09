@@ -6,10 +6,15 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 
 import java.util.List;
 
+/**
+ * Facade for QEMU VM management on a node.
+ */
 public record PveQemu(ProxmoxHttpClient client, String nodeName) {
 
     /**
-     * Lists all VMs on this node
+     * Lists all QEMU VMs on this node.
+     *
+     * @return a request returning the list of VMs
      */
     public ProxmoxRequest<List<PveQemuIndex>> getIndex() {
         return new ProxmoxRequest<>(() -> 
@@ -19,7 +24,11 @@ public record PveQemu(ProxmoxHttpClient client, String nodeName) {
     }
 
     /**
-     * Gets a specific VM by VMID
+     * Gets a specific VM by VMID.
+     *
+     * @param vmid the VM ID (must be positive)
+     * @return the VM API facade
+     * @throws IllegalArgumentException if vmid is not positive
      */
     public PveQemuVm get(int vmid) {
         if (vmid <= 0) {

@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
+/**
+ * Represents memory balloon information for a QEMU VM.
+ */
 public class PveQemuBalloonInfo {
 
     private long actual, free_mem, last_update, max_mem, mem_swapped_in, mem_swapped_out;

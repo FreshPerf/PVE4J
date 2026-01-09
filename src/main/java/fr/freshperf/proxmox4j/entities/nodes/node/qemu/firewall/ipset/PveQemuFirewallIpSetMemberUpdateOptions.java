@@ -6,7 +6,7 @@ import fr.freshperf.proxmox4j.util.ParamsHelpers;
 import java.util.Map;
 
 /**
- * Options for updating a firewall IP set member (/firewall/ipset/{name}/{cidr}, PUT).
+ * Options for updating a firewall IP set member.
  */
 public class PveQemuFirewallIpSetMemberUpdateOptions implements ParameterizedParamsConvertible<String> {
 
@@ -14,6 +14,11 @@ public class PveQemuFirewallIpSetMemberUpdateOptions implements ParameterizedPar
     private Boolean nomatch;
     private String digest;
 
+    /**
+     * Creates a new builder for IP set member update options.
+     *
+     * @return a new PveQemuFirewallIpSetMemberUpdateOptions instance
+     */
     public static PveQemuFirewallIpSetMemberUpdateOptions builder() {
         return new PveQemuFirewallIpSetMemberUpdateOptions();
     }

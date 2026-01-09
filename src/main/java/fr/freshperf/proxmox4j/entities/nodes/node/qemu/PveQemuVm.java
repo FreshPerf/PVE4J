@@ -6,6 +6,9 @@ import fr.freshperf.proxmox4j.request.ProxmoxHttpClient;
 import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 import fr.freshperf.proxmox4j.request.TaskResponseTransformer;
 
+/**
+ * Facade for managing a specific QEMU VM.
+ */
 public class PveQemuVm {
 
     private final ProxmoxHttpClient client;
@@ -14,6 +17,13 @@ public class PveQemuVm {
 
     private final PveQemuVmVnc pveQemuVmVnc;
 
+    /**
+     * Creates a new VM facade.
+     *
+     * @param client   the HTTP client
+     * @param nodeName the node name
+     * @param vmid     the VM ID
+     */
     public PveQemuVm(ProxmoxHttpClient client, String nodeName, int vmid) {
         this.client = client;
         this.nodeName = nodeName;
@@ -21,16 +31,28 @@ public class PveQemuVm {
         this.pveQemuVmVnc = new PveQemuVmVnc(client, nodeName, vmid);
     }
 
+    /**
+     * Gets the VNC interface for this VM.
+     *
+     * @return the VNC API facade
+     */
     public PveQemuVmVnc getVnc() {
         return pveQemuVmVnc;
     }
 
+    /**
+     * Gets the firewall interface for this VM.
+     *
+     * @return the firewall API facade
+     */
     public PveQemuFirewall getFirewall() {
         return new PveQemuFirewall(client, nodeName, vmid);
     }
 
     /**
-     * Gets the current VM status
+     * Gets the current VM status.
+     *
+     * @return a request returning the VM status
      */
     public ProxmoxRequest<PveQemuStatus> getStatus() {
         return new ProxmoxRequest<>(() -> 
@@ -39,7 +61,9 @@ public class PveQemuVm {
         );
     }
     /**
-     * Gets the VM configuration
+     * Gets the VM configuration.
+     *
+     * @return a request returning the VM configuration
      */
     public ProxmoxRequest<PveQemuConfig> getConfig() {
         return new ProxmoxRequest<>(() -> 
@@ -49,7 +73,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Starts the VM
+     * Starts the VM.
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> start() {
         return new ProxmoxRequest<>(() ->
@@ -60,7 +86,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Stops the VM
+     * Stops the VM (hard stop).
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> stop() {
         return new ProxmoxRequest<>(() ->
@@ -71,7 +99,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Shuts down the VM
+     * Shuts down the VM gracefully via ACPI.
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> shutdown() {
         return new ProxmoxRequest<>(() ->
@@ -82,7 +112,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Resets the VM
+     * Resets the VM (hard reset).
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> reset() {
         return new ProxmoxRequest<>(() ->
@@ -93,7 +125,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Suspends the VM
+     * Suspends the VM to RAM or disk.
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> suspend() {
         return new ProxmoxRequest<>(() ->
@@ -104,7 +138,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Resumes the VM
+     * Resumes a suspended VM.
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> resume() {
         return new ProxmoxRequest<>(() ->
@@ -115,7 +151,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Reboots the VM
+     * Reboots the VM gracefully via ACPI.
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> reboot() {
         return new ProxmoxRequest<>(() ->
@@ -126,7 +164,9 @@ public class PveQemuVm {
     }
 
     /**
-     * Deletes the VM
+     * Deletes the VM and all associated resources.
+     *
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> delete() {
         return new ProxmoxRequest<>(() ->
@@ -138,14 +178,21 @@ public class PveQemuVm {
 
     /**
      * Clones the VM/template to a new VMID.
-     * Required: newid. Optional parameters are provided via {@link PveQemuCloneOptions}.
+     *
+     * @param newVmid the target VM ID (must be >= 100)
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> cloneVm(int newVmid) {
         return cloneVm(newVmid, null);
     }
 
     /**
-     * Clones the VM/template to a new VMID with optional settings.
+     * Clones the VM/template to a new VMID with options.
+     *
+     * @param newVmid the target VM ID (must be >= 100)
+     * @param options clone options (name, storage, etc.) or null
+     * @return a request returning the task for tracking
+     * @throws IllegalArgumentException if newVmid < 100
      */
     public ProxmoxRequest<PveTask> cloneVm(int newVmid, PveQemuCloneOptions options) {
         if (newVmid < 100) {
@@ -163,15 +210,23 @@ public class PveQemuVm {
     }
 
     /**
-     * Resizes a disk of the VM. Size may be absolute (e.g. "20G") or relative (e.g. "+10G").
-     * See {@link PveQemuResizeOptions} for optional parameters.
+     * Resizes a disk of the VM.
+     *
+     * @param disk the disk to resize (e.g., "scsi0", "virtio0")
+     * @param size absolute size (e.g., "20G") or relative (e.g., "+10G")
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> resize(String disk, String size) {
         return resize(disk, size, null);
     }
 
     /**
-     * Resizes a disk of the VM with optional parameters.
+     * Resizes a disk of the VM with options.
+     *
+     * @param disk    the disk to resize (e.g., "scsi0", "virtio0")
+     * @param size    absolute size (e.g., "20G") or relative (e.g., "+10G")
+     * @param options resize options or null
+     * @return a request returning the task for tracking
      */
     public ProxmoxRequest<PveTask> resize(String disk, String size, PveQemuResizeOptions options) {
         PveQemuResizeOptions effectiveOptions = options != null ? options : PveQemuResizeOptions.builder();
@@ -185,7 +240,11 @@ public class PveQemuVm {
     }
 
     /**
-     * Update VM configuration (asynchronous, POST)
+     * Updates VM configuration asynchronously (POST).
+     *
+     * @param options the configuration options to update
+     * @return a request returning the task for tracking
+     * @throws IllegalArgumentException if options is null
      */
     public ProxmoxRequest<PveTask> updateConfig(PveQemuConfigUpdateOptions options) {
         if (options == null) {
@@ -200,7 +259,11 @@ public class PveQemuVm {
     }
 
     /**
-     * Update VM configuration (synchronous, PUT)
+     * Updates VM configuration synchronously (PUT).
+     *
+     * @param options the configuration options to update
+     * @return a request returning the task for tracking
+     * @throws IllegalArgumentException if options is null
      */
     public ProxmoxRequest<PveTask> updateConfigSync(PveQemuConfigUpdateOptions options) {
         if (options == null) {

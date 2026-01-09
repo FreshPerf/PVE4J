@@ -6,7 +6,7 @@ import fr.freshperf.proxmox4j.util.ParamsHelpers;
 import java.util.Map;
 
 /**
- * Options for creating/renaming an IP set (POST /nodes/{node}/qemu/{vmid}/firewall/ipset).
+ * Options for creating or renaming a firewall IP set.
  */
 public class PveQemuFirewallIpSetCreateOptions implements ParameterizedParamsConvertible<String> {
 
@@ -14,6 +14,11 @@ public class PveQemuFirewallIpSetCreateOptions implements ParameterizedParamsCon
     private String digest;
     private String rename;
 
+    /**
+     * Creates a new builder for IP set creation options.
+     *
+     * @return a new PveQemuFirewallIpSetCreateOptions instance
+     */
     public static PveQemuFirewallIpSetCreateOptions builder() {
         return new PveQemuFirewallIpSetCreateOptions();
     }

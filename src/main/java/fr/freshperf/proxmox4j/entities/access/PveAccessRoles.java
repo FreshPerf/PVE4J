@@ -6,10 +6,15 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 
 import java.util.List;
 
+/**
+ * Facade for Proxmox role management endpoints.
+ */
 public record PveAccessRoles(ProxmoxHttpClient httpClient) {
 
     /**
-     * Lists all roles
+     * Lists all roles.
+     *
+     * @return a request returning the list of roles
      */
     public ProxmoxRequest<List<PveAccessRole>> getIndex() {
         return new ProxmoxRequest<>(() -> 
@@ -18,7 +23,11 @@ public record PveAccessRoles(ProxmoxHttpClient httpClient) {
     }
 
     /**
-     * Gets a specific role
+     * Gets a specific role by ID.
+     *
+     * @param roleid the role ID
+     * @return a request returning the role details
+     * @throws IllegalArgumentException if roleid is null or empty
      */
     public ProxmoxRequest<PveAccessRole> get(String roleid) {
         if (roleid == null || roleid.isEmpty()) {

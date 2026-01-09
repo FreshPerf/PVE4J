@@ -1,8 +1,11 @@
 package fr.freshperf.proxmox4j.entities.nodes;
 
+/**
+ * Represents node summary information in the nodes list.
+ */
 public class PveNodesIndex {
 
-    private String node,level,ssl_fingerprint;
+    private String node, level, ssl_fingerprint;
     private Status status;
     private float cpu;
     private long maxcpu,maxmem,mem,uptime;

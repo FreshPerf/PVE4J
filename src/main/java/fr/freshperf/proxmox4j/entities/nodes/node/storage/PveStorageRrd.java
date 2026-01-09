@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.storage;
 
+/**
+ * Represents RRD (Round Robin Database) statistics for a storage.
+ */
 public class PveStorageRrd {
 
     // RRD data is typically returned as a dynamic structure

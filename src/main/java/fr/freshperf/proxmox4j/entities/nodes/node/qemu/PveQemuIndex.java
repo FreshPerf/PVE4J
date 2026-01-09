@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
+/**
+ * Represents VM summary information in the QEMU list.
+ */
 public class PveQemuIndex {
 
     private int vmid, cpus;

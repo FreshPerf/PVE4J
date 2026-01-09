@@ -8,8 +8,20 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Utility class for building Proxmox API URLs.
+ */
 public class ProxmoxApiBaseUrlBuilder {
 
+    /**
+     * Builds a console URL for VNC access to a VM.
+     *
+     * @param client             the HTTP client
+     * @param nodeName           the node name
+     * @param vmid               the VM ID
+     * @param pveQemuVmVncProxy  the VNC proxy information
+     * @return the console URL
+     */
     public static String buildConsoleUrl(ProxmoxHttpClient client, String nodeName, int vmid, PveQemuVmVncProxy pveQemuVmVncProxy) {
         return client.getBaseUrl()
                 .replace("/api2/json/",
@@ -18,6 +30,14 @@ public class ProxmoxApiBaseUrlBuilder {
                         pveQemuVmVncProxy.getPort()+"&vncticket="+ pveQemuVmVncProxy.getTicket(), StandardCharsets.UTF_8));
     }
 
+    /**
+     * Builds the base API URL from host and port.
+     *
+     * @param host the Proxmox host address
+     * @param port the API port (use 0 to auto-detect from scheme)
+     * @return the base API URL ending with /api2/json/
+     * @throws IllegalArgumentException if host is null or blank
+     */
     public static String buildApiBaseUrl(String host, int port) {
         if (host == null || host.isBlank()) {
             throw new IllegalArgumentException("Host cannot be null or blank");
@@ -63,6 +83,14 @@ public class ProxmoxApiBaseUrlBuilder {
         return baseUrl.toString();
     }
 
+    /**
+     * Builds a WebSocket URL for VNC connections.
+     *
+     * @param client   the HTTP client
+     * @param nodeName the node name
+     * @param vmid     the VM ID
+     * @return the WebSocket URL for VNC
+     */
     public static String buildWebsocketUrl(ProxmoxHttpClient client, String nodeName, int vmid) {
         return client.getBaseUrl()
                 .replaceFirst("^https?://", "wss://") + "nodes/"+nodeName+"/qemu/"+vmid+"/vncwebsocket";

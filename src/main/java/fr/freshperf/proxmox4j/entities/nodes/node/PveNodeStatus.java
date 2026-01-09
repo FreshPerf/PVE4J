@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node;
 
+/**
+ * Represents detailed node status information.
+ */
 public class PveNodeStatus {
 
     private String uptime, wait, idle, pveversion, kversion;

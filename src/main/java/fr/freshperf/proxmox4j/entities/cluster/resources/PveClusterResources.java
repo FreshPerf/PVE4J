@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.cluster.resources;
 
+/**
+ * Represents a cluster resource (VM, container, node, or storage).
+ */
 public class PveClusterResources {
 
     private String type, id, node, status;

@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.access;
 
+/**
+ * Represents an authentication ticket returned after login.
+ */
 public class PveAccessTicket {
 
     private String username, ticket, CSRFPreventionToken;

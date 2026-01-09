@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node;
 
+/**
+ * Represents an entry in the node API index.
+ */
 public class PveNodeIndex {
 
     private String name;

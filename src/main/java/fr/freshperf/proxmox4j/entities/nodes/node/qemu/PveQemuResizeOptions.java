@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 /**
  * Options for resizing a QEMU VM disk.
+ * Use the builder pattern to configure resize settings.
  */
 public class PveQemuResizeOptions implements TwoParamsConvertible<String, String> {
 
@@ -29,6 +30,11 @@ public class PveQemuResizeOptions implements TwoParamsConvertible<String, String
     private String digest;
     private Boolean skiplock;
 
+    /**
+     * Creates a new builder for resize options.
+     *
+     * @return a new PveQemuResizeOptions instance
+     */
     public static PveQemuResizeOptions builder() {
         return new PveQemuResizeOptions();
     }
@@ -47,11 +53,13 @@ public class PveQemuResizeOptions implements TwoParamsConvertible<String, String
         ParamsHelpers.putBool(params, "skiplock", skiplock);
     }
 
+    /** Sets the configuration digest for conflict detection. */
     public PveQemuResizeOptions digest(String digest) {
         this.digest = digest;
         return this;
     }
 
+    /** Sets whether to skip the lock check. */
     public PveQemuResizeOptions skiplock(Boolean skiplock) {
         this.skiplock = skiplock;
         return this;

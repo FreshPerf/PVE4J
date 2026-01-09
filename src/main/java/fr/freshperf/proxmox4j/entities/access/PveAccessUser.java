@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.access;
 
+/**
+ * Represents a Proxmox user account.
+ */
 public class PveAccessUser {
 
     private String userid, comment, email, firstname, lastname, realm;

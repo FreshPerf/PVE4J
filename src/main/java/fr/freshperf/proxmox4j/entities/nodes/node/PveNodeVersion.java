@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node;
 
+/**
+ * Represents node version information.
+ */
 public class PveNodeVersion {
 
     private String release, repoid, version;

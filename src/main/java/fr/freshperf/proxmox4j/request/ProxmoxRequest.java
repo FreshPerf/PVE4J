@@ -54,6 +54,11 @@ public class ProxmoxRequest<T> {
     private Proxmox proxmoxForCallback;
     private Proxmox proxmoxForWait;
     
+    /**
+     * Creates a new ProxmoxRequest with the given executor.
+     *
+     * @param requestExecutor the executor that performs the actual API call
+     */
     public ProxmoxRequest(ProxmoxRequestExecutor<T> requestExecutor) {
         this.requestExecutor = requestExecutor;
     }

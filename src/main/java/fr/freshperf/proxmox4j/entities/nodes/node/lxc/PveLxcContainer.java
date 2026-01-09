@@ -4,10 +4,15 @@ import com.google.gson.JsonObject;
 import fr.freshperf.proxmox4j.request.ProxmoxHttpClient;
 import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 
+/**
+ * Facade for managing a specific LXC container.
+ */
 public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmid) {
 
     /**
-     * Gets the current container status
+     * Gets the current container status.
+     *
+     * @return a request returning the container status
      */
     public ProxmoxRequest<PveLxcStatus> getStatus() {
         return new ProxmoxRequest<>(() -> 
@@ -17,7 +22,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Gets the container configuration
+     * Gets the container configuration.
+     *
+     * @return a request returning the container configuration
      */
     public ProxmoxRequest<PveLxcConfig> getConfig() {
         return new ProxmoxRequest<>(() -> 
@@ -27,7 +34,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Starts the container
+     * Starts the container.
+     *
+     * @return a request returning the task result
      */
     public ProxmoxRequest<JsonObject> start() {
         return new ProxmoxRequest<>(() -> 
@@ -37,7 +46,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Stops the container
+     * Stops the container (hard stop).
+     *
+     * @return a request returning the task result
      */
     public ProxmoxRequest<JsonObject> stop() {
         return new ProxmoxRequest<>(() -> 
@@ -47,7 +58,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Shuts down the container
+     * Shuts down the container gracefully.
+     *
+     * @return a request returning the task result
      */
     public ProxmoxRequest<JsonObject> shutdown() {
         return new ProxmoxRequest<>(() -> 
@@ -57,7 +70,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Reboots the container
+     * Reboots the container.
+     *
+     * @return a request returning the task result
      */
     public ProxmoxRequest<JsonObject> reboot() {
         return new ProxmoxRequest<>(() -> 
@@ -67,7 +82,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Suspends the container
+     * Suspends the container.
+     *
+     * @return a request returning the task result
      */
     public ProxmoxRequest<JsonObject> suspend() {
         return new ProxmoxRequest<>(() -> 
@@ -77,7 +94,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Resumes the container
+     * Resumes a suspended container.
+     *
+     * @return a request returning the task result
      */
     public ProxmoxRequest<JsonObject> resume() {
         return new ProxmoxRequest<>(() -> 
@@ -87,7 +106,9 @@ public record PveLxcContainer(ProxmoxHttpClient client, String nodeName, int vmi
     }
 
     /**
-     * Deletes the container
+     * Deletes the container and all associated resources.
+     *
+     * @return a request returning the task result
      */
     public ProxmoxRequest<JsonObject> delete() {
         return new ProxmoxRequest<>(() -> 

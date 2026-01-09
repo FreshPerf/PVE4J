@@ -6,10 +6,15 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 
 import java.util.List;
 
+/**
+ * Facade for managing a specific storage.
+ */
 public record PveStorageItem(ProxmoxHttpClient client, String nodeName, String storageId) {
 
     /**
-     * Gets the storage status
+     * Gets the storage status.
+     *
+     * @return a request returning the storage status
      */
     public ProxmoxRequest<PveStorageStatus> getStatus() {
         return new ProxmoxRequest<>(() -> 
@@ -19,7 +24,9 @@ public record PveStorageItem(ProxmoxHttpClient client, String nodeName, String s
     }
 
     /**
-     * Lists content on this storage
+     * Lists content on this storage (images, ISOs, etc.).
+     *
+     * @return a request returning the list of storage content
      */
     public ProxmoxRequest<List<PveStorageContent>> getContent() {
         return new ProxmoxRequest<>(() -> 
@@ -29,7 +36,9 @@ public record PveStorageItem(ProxmoxHttpClient client, String nodeName, String s
     }
 
     /**
-     * Gets RRD statistics (graph data)
+     * Gets RRD statistics (graph data).
+     *
+     * @return a request returning the RRD data
      */
     public ProxmoxRequest<PveStorageRrd> getRrd() {
         return new ProxmoxRequest<>(() -> 

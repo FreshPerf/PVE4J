@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.storage;
 
+/**
+ * Represents detailed storage status information.
+ */
 public class PveStorageStatus {
 
     private String storage, type, content;

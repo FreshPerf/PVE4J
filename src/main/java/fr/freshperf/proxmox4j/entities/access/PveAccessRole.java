@@ -2,6 +2,9 @@ package fr.freshperf.proxmox4j.entities.access;
 
 import java.util.Map;
 
+/**
+ * Represents a Proxmox role with its privileges.
+ */
 public class PveAccessRole {
 
     private String roleid;

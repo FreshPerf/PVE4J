@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.cluster;
 
+/**
+ * Represents an entry in the cluster API index.
+ */
 public class PveClusterIndex {
 
     private String name;

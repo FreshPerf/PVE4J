@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.access;
 
+/**
+ * Represents a Proxmox authentication domain/realm.
+ */
 public class PveAccessDomain {
 
     private String realm, type, comment;

@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.access;
 
+/**
+ * Represents an entry in the access API index.
+ */
 public class PveAccessIndex {
 
     private String subdir;

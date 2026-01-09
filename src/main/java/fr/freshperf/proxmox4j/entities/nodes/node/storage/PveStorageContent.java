@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.storage;
 
+/**
+ * Represents content stored on a storage (disk images, ISOs, etc.).
+ */
 public class PveStorageContent {
 
     private String volid, format, content;

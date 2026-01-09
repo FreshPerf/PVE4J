@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.lxc;
 
+/**
+ * Represents container summary information in the LXC list.
+ */
 public class PveLxcIndex {
 
     private int vmid, cpus;

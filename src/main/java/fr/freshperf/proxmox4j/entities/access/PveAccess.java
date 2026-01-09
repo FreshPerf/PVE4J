@@ -7,10 +7,15 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 
 import java.util.List;
 
+/**
+ * Facade for Proxmox access/authentication management endpoints.
+ */
 public record PveAccess(ProxmoxHttpClient httpClient) {
 
     /**
-     * Gets the access index
+     * Gets the access index (list of available endpoints).
+     *
+     * @return a request returning the list of access endpoints
      */
     public ProxmoxRequest<List<PveAccessIndex>> getIndex() {
         return new ProxmoxRequest<>(() -> 
@@ -19,10 +24,12 @@ public record PveAccess(ProxmoxHttpClient httpClient) {
     }
 
     /**
-     * Gets authentication ticket (for username/password authentication)
-     * @param username Username
-     * @param password Password
-     * @param realm Authentication realm (default: pam)
+     * Gets an authentication ticket using username/password.
+     *
+     * @param username the username
+     * @param password the password
+     * @param realm    the authentication realm (e.g., "pam", "pve")
+     * @return a request returning the authentication ticket
      */
     public ProxmoxRequest<PveAccessTicket> getTicket(String username, String password, String realm) {
         return new ProxmoxRequest<>(() -> {
@@ -37,35 +44,47 @@ public record PveAccess(ProxmoxHttpClient httpClient) {
     }
 
     /**
-     * Gets authentication ticket with default PAM realm
+     * Gets an authentication ticket using the default PAM realm.
+     *
+     * @param username the username
+     * @param password the password
+     * @return a request returning the authentication ticket
      */
     public ProxmoxRequest<PveAccessTicket> getTicket(String username, String password) {
         return getTicket(username, password, "pam");
     }
 
     /**
-     * Gets users
+     * Gets the users management interface.
+     *
+     * @return the users API facade
      */
     public PveAccessUsers getUsers() {
         return new PveAccessUsers(httpClient);
     }
 
     /**
-     * Gets groups
+     * Gets the groups management interface.
+     *
+     * @return the groups API facade
      */
     public PveAccessGroups getGroups() {
         return new PveAccessGroups(httpClient);
     }
 
     /**
-     * Gets roles
+     * Gets the roles management interface.
+     *
+     * @return the roles API facade
      */
     public PveAccessRoles getRoles() {
         return new PveAccessRoles(httpClient);
     }
 
     /**
-     * Gets ACL (Access Control List)
+     * Gets the Access Control List.
+     *
+     * @return a request returning the list of ACL entries
      */
     public ProxmoxRequest<List<PveAccessAcl>> getAcl() {
         return new ProxmoxRequest<>(() -> 
@@ -74,7 +93,9 @@ public record PveAccess(ProxmoxHttpClient httpClient) {
     }
 
     /**
-     * Gets domains (authentication realms)
+     * Gets available authentication domains/realms.
+     *
+     * @return a request returning the list of domains
      */
     public ProxmoxRequest<List<PveAccessDomain>> getDomains() {
         return new ProxmoxRequest<>(() -> 

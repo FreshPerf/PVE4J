@@ -7,10 +7,15 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 import fr.freshperf.proxmox4j.request.TaskResponseTransformer;
 
 /**
- * Facade to manage firewall options and IP sets for a QEMU VM.
+ * Facade for managing firewall settings of a QEMU VM.
  */
 public record PveQemuFirewall (ProxmoxHttpClient client, String nodeName, int vmid) {
 
+    /**
+     * Gets the IP set management interface.
+     *
+     * @return the IP set API facade
+     */
     public PveQemuFirewallIpSet getIpSet() {
         return new PveQemuFirewallIpSet(client, nodeName, vmid);
     }
@@ -19,9 +24,10 @@ public record PveQemuFirewall (ProxmoxHttpClient client, String nodeName, int vm
         return "nodes/" + nodeName + "/qemu/" + vmid + suffix;
     }
 
-    // Options
     /**
-     * Gets the firewall options for this VM (/firewall/options, GET).
+     * Gets the firewall options for this VM.
+     *
+     * @return a request returning the firewall options
      */
     public ProxmoxRequest<PveQemuFirewallOptions> getOptions() {
         return new ProxmoxRequest<>(() ->
@@ -31,7 +37,11 @@ public record PveQemuFirewall (ProxmoxHttpClient client, String nodeName, int vm
     }
 
     /**
-     * Updates the firewall options for this VM (/firewall/options, PUT).
+     * Updates the firewall options for this VM.
+     *
+     * @param options the options to update
+     * @return a request returning the task for tracking
+     * @throws IllegalArgumentException if options is null
      */
     public ProxmoxRequest<PveTask> updateOptions(PveQemuFirewallOptionsUpdate options) {
         if (options == null) {

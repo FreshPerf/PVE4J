@@ -6,10 +6,15 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 
 import java.util.List;
 
+/**
+ * Facade for Proxmox user management endpoints.
+ */
 public record PveAccessUsers(ProxmoxHttpClient httpClient) {
 
     /**
-     * Lists all users
+     * Lists all users.
+     *
+     * @return a request returning the list of users
      */
     public ProxmoxRequest<List<PveAccessUser>> getIndex() {
         return new ProxmoxRequest<>(() -> 
@@ -18,7 +23,11 @@ public record PveAccessUsers(ProxmoxHttpClient httpClient) {
     }
 
     /**
-     * Gets a specific user
+     * Gets a specific user by ID.
+     *
+     * @param userid the user ID (e.g., "root@pam")
+     * @return a request returning the user details
+     * @throws IllegalArgumentException if userid is null or empty
      */
     public ProxmoxRequest<PveAccessUser> get(String userid) {
         if (userid == null || userid.isEmpty()) {

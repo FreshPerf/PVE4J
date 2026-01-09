@@ -6,10 +6,15 @@ import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 
 import java.util.List;
 
+/**
+ * Facade for Proxmox group management endpoints.
+ */
 public record PveAccessGroups(ProxmoxHttpClient httpClient) {
 
     /**
-     * Lists all groups
+     * Lists all groups.
+     *
+     * @return a request returning the list of groups
      */
     public ProxmoxRequest<List<PveAccessGroup>> getIndex() {
         return new ProxmoxRequest<>(() -> 
@@ -18,7 +23,11 @@ public record PveAccessGroups(ProxmoxHttpClient httpClient) {
     }
 
     /**
-     * Gets a specific group
+     * Gets a specific group by ID.
+     *
+     * @param groupid the group ID
+     * @return a request returning the group details
+     * @throws IllegalArgumentException if groupid is null or empty
      */
     public ProxmoxRequest<PveAccessGroup> get(String groupid) {
         if (groupid == null || groupid.isEmpty()) {

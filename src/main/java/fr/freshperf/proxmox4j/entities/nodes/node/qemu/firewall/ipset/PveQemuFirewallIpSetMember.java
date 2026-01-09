@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.qemu.firewall.ipset;
 
+/**
+ * Represents a member of a firewall IP set.
+ */
 public class PveQemuFirewallIpSetMember {
 
     private String cidr;

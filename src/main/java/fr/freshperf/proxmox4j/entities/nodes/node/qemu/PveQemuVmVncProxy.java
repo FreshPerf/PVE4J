@@ -4,9 +4,12 @@ import fr.freshperf.proxmox4j.Proxmox;
 import fr.freshperf.proxmox4j.request.ProxmoxRequest;
 import fr.freshperf.proxmox4j.util.ProxmoxApiBaseUrlBuilder;
 
+/**
+ * Represents VNC proxy connection details.
+ */
 public class PveQemuVmVncProxy {
 
-    private String cert,ticket,upid,user,password;
+    private String cert, ticket, upid, user, password;
     private int port;
 
     public String getCert() {

@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.lxc;
 
+/**
+ * Represents the configuration of an LXC container.
+ */
 public class PveLxcConfig {
 
     private String hostname, ostype, arch, cmode, console, tty;

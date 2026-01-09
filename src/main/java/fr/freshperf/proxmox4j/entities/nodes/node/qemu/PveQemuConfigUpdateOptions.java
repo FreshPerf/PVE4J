@@ -8,7 +8,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Options for updating a QEMU VM configuration (POST/PUT /nodes/{node}/qemu/{vmid}/config).
+ * Options for updating a QEMU VM configuration.
+ * Use the builder pattern to set configuration options.
  */
 public class PveQemuConfigUpdateOptions implements ParamsConvertible {
 
@@ -102,6 +103,11 @@ public class PveQemuConfigUpdateOptions implements ParamsConvertible {
     private String vmstatestorage;
     private String watchdog;
 
+    /**
+     * Creates a new builder for config update options.
+     *
+     * @return a new PveQemuConfigUpdateOptions instance
+     */
     public static PveQemuConfigUpdateOptions builder() {
         return new PveQemuConfigUpdateOptions();
     }

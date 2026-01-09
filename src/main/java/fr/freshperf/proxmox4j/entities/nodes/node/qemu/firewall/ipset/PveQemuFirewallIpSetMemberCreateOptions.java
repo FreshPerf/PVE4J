@@ -6,13 +6,18 @@ import fr.freshperf.proxmox4j.util.ParamsHelpers;
 import java.util.Map;
 
 /**
- * Options for adding a member to an IP set (POST /nodes/{node}/qemu/{vmid}/firewall/ipset/{name}).
+ * Options for adding a member to a firewall IP set.
  */
 public class PveQemuFirewallIpSetMemberCreateOptions implements ParameterizedParamsConvertible<String> {
 
     private String comment;
     private Boolean nomatch;
 
+    /**
+     * Creates a new builder for IP set member creation options.
+     *
+     * @return a new PveQemuFirewallIpSetMemberCreateOptions instance
+     */
     public static PveQemuFirewallIpSetMemberCreateOptions builder() {
         return new PveQemuFirewallIpSetMemberCreateOptions();
     }

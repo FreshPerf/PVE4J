@@ -1,8 +1,11 @@
 package fr.freshperf.proxmox4j.entities.cluster;
 
+/**
+ * Represents cluster or node status information.
+ */
 public class PveClusterStatus {
 
-    private String id,name,ip,level;
+    private String id, name, ip, level;
     private boolean local,online,quorate;
     private int nodeid,nodes,version;
     private Type type;

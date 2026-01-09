@@ -11,22 +11,42 @@ import fr.freshperf.proxmox4j.throwable.ProxmoxAPIError;
 
 import java.util.List;
 
+/**
+ * Facade for Proxmox cluster management endpoints.
+ */
 public record PveCluster(ProxmoxHttpClient httpClient) {
 
+    /**
+     * Gets the cluster index (list of available endpoints).
+     *
+     * @return a request returning the cluster index
+     */
     public ProxmoxRequest<List<PveClusterIndex>> getIndex() {
         return new ProxmoxRequest<>(() -> httpClient.get("cluster/").executeList(new TypeToken<List<PveClusterIndex>>(){}));
     }
 
+    /**
+     * Gets cluster status information.
+     *
+     * @return a request returning the cluster status
+     */
     public ProxmoxRequest<List<PveClusterStatus>> getStatus() {
         return new ProxmoxRequest<>(() -> httpClient.get("cluster/status").executeList(new TypeToken<List<PveClusterStatus>>(){}));
     }
 
+    /**
+     * Gets the next available VMID.
+     *
+     * @return a request returning the next free VMID
+     */
     public ProxmoxRequest<Integer> getNextId() {
         return new ProxmoxRequest<>(() -> httpClient.get("cluster/nextid").execute(Integer.class));
     }
 
     /**
-     * Gets cluster resources (all VMs, containers, nodes, storages)
+     * Gets all cluster resources (VMs, containers, nodes, storages).
+     *
+     * @return a request returning all cluster resources
      */
     public ProxmoxRequest<List<PveClusterResources>> getResources() {
         return new ProxmoxRequest<>(() -> 
@@ -35,8 +55,10 @@ public record PveCluster(ProxmoxHttpClient httpClient) {
     }
 
     /**
-     * Gets cluster resources filtered by type
-     * @param type Resource type: "vm", "storage", "node", or null for all
+     * Gets cluster resources filtered by type.
+     *
+     * @param type resource type: "vm", "storage", "node", or null for all
+     * @return a request returning filtered cluster resources
      */
     public ProxmoxRequest<List<PveClusterResources>> getResources(String type) {
         return new ProxmoxRequest<>(() -> {

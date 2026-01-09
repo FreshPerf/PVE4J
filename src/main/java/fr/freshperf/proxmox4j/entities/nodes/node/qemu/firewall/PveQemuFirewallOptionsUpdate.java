@@ -6,7 +6,8 @@ import fr.freshperf.proxmox4j.util.ParamsHelpers;
 import java.util.Map;
 
 /**
- * Options for updating QEMU firewall options (PUT /nodes/{node}/qemu/{vmid}/firewall/options).
+ * Options for updating QEMU VM firewall settings.
+ * Use the builder pattern to configure firewall options.
  */
 public class PveQemuFirewallOptionsUpdate implements ParamsConvertible {
 
@@ -23,6 +24,11 @@ public class PveQemuFirewallOptionsUpdate implements ParamsConvertible {
     private String digest;
     private String delete;
 
+    /**
+     * Creates a new builder for firewall options update.
+     *
+     * @return a new PveQemuFirewallOptionsUpdate instance
+     */
     public static PveQemuFirewallOptionsUpdate builder() {
         return new PveQemuFirewallOptionsUpdate();
     }

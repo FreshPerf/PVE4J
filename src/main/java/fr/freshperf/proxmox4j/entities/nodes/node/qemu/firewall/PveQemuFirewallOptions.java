@@ -2,6 +2,9 @@ package fr.freshperf.proxmox4j.entities.nodes.node.qemu.firewall;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Represents firewall options for a QEMU VM.
+ */
 public class PveQemuFirewallOptions {
 
     private int dhcp;

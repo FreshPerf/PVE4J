@@ -1,5 +1,8 @@
 package fr.freshperf.proxmox4j.entities.nodes.node.lxc;
 
+/**
+ * Represents the current status of an LXC container.
+ */
 public class PveLxcStatus {
 
     private int vmid, cpus;

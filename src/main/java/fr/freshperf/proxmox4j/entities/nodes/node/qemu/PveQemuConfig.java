@@ -2,6 +2,9 @@ package fr.freshperf.proxmox4j.entities.nodes.node.qemu;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Represents the configuration of a QEMU VM.
+ */
 public class PveQemuConfig {
 
     // Identification / metadata

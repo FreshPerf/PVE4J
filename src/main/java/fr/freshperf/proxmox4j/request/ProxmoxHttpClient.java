@@ -30,6 +30,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * HTTP client for making requests to the Proxmox VE API.
+ * Handles authentication, SSL configuration, and JSON parsing.
+ */
 public class ProxmoxHttpClient {
 
     private final String apiToken;
@@ -40,18 +44,41 @@ public class ProxmoxHttpClient {
     private Gson gson;
     private ProxmoxResponseTransformer defaultTransformer;
 
+    /**
+     * Returns the base URL for API requests.
+     *
+     * @return the base API URL
+     */
     public String getBaseUrl() {
         return baseUrl;
     }
 
+    /**
+     * Returns the authentication ticket (if using ticket-based auth).
+     *
+     * @return the authentication ticket, or null if using API token
+     */
     public String getTicket() {
         return ticket;
     }
 
+    /**
+     * Creates a new HTTP client with API token authentication and default security settings.
+     *
+     * @param baseUrl  the base API URL
+     * @param apiToken the API token for authentication
+     */
     public ProxmoxHttpClient(String baseUrl, String apiToken) {
         this(baseUrl, apiToken, SecurityConfig.secure());
     }
 
+    /**
+     * Creates a new HTTP client with API token authentication.
+     *
+     * @param baseUrl        the base API URL
+     * @param apiToken       the API token for authentication
+     * @param securityConfig SSL/TLS security configuration
+     */
     public ProxmoxHttpClient(String baseUrl, String apiToken, SecurityConfig securityConfig) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         this.apiToken = apiToken;
@@ -68,10 +95,22 @@ public class ProxmoxHttpClient {
         initializeClient(securityConfig);
     }
 
+    /**
+     * Creates an unauthenticated HTTP client (for login requests).
+     *
+     * @param baseUrl        the base API URL
+     * @param securityConfig SSL/TLS security configuration
+     * @return a new unauthenticated HTTP client
+     */
     public static ProxmoxHttpClient createUnauthenticated(String baseUrl, SecurityConfig securityConfig) {
         return new ProxmoxHttpClient(baseUrl, securityConfig, true);
     }
 
+    /**
+     * Initializes the HTTP client with the given security configuration.
+     *
+     * @param securityConfig SSL/TLS security configuration
+     */
     private void initializeClient(SecurityConfig securityConfig) {
         HttpClient.Builder clientBuilder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
@@ -130,6 +169,14 @@ public class ProxmoxHttpClient {
         this.defaultTransformer = new ProxmoxResponseTransformer();
     }
 
+    /**
+     * Creates a new HTTP client with ticket-based authentication.
+     *
+     * @param baseUrl        the base API URL
+     * @param ticket         the authentication ticket
+     * @param csrfToken      the CSRF prevention token
+     * @param securityConfig SSL/TLS security configuration
+     */
     public ProxmoxHttpClient(String baseUrl, String ticket, String csrfToken, SecurityConfig securityConfig) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         this.apiToken = null;
@@ -138,31 +185,66 @@ public class ProxmoxHttpClient {
         initializeClient(securityConfig);
     }
 
-
+    /**
+     * Creates a GET request builder.
+     *
+     * @param path the API path (relative to base URL)
+     * @return a new request builder
+     */
     public RequestBuilder get(String path) {
         return new RequestBuilder(this, "GET", path);
     }
 
+    /**
+     * Creates a POST request builder.
+     *
+     * @param path the API path (relative to base URL)
+     * @return a new request builder
+     */
     public RequestBuilder post(String path) {
         return new RequestBuilder(this, "POST", path);
     }
 
+    /**
+     * Creates a PUT request builder.
+     *
+     * @param path the API path (relative to base URL)
+     * @return a new request builder
+     */
     public RequestBuilder put(String path) {
         return new RequestBuilder(this, "PUT", path);
     }
 
+    /**
+     * Creates a PATCH request builder.
+     *
+     * @param path the API path (relative to base URL)
+     * @return a new request builder
+     */
     public RequestBuilder patch(String path) {
         return new RequestBuilder(this, "PATCH", path);
     }
 
+    /**
+     * Creates a DELETE request builder.
+     *
+     * @param path the API path (relative to base URL)
+     * @return a new request builder
+     */
     public RequestBuilder delete(String path) {
         return new RequestBuilder(this, "DELETE", path);
     }
 
+    /**
+     * Executes a request and deserializes the response to the given class.
+     */
     <T> T execute(RequestBuilder builder, Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
         return executeRequest(builder, clazz);
     }
-    
+
+    /**
+     * Executes a request and deserializes the response to a parameterized type.
+     */
     <T> T executeList(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
         return executeRequestWithType(builder, typeToken);
     }
@@ -341,6 +423,9 @@ public class ProxmoxHttpClient {
         return url.toString();
     }
 
+    /**
+     * Builder for constructing and executing HTTP requests.
+     */
     public static class RequestBuilder {
         private final ProxmoxHttpClient client;
         private final String method;
@@ -356,34 +441,84 @@ public class ProxmoxHttpClient {
             this.params = new HashMap<>();
         }
 
+        /**
+         * Adds a query parameter to the request.
+         *
+         * @param key   the parameter name
+         * @param value the parameter value
+         * @return this builder for chaining
+         */
         public RequestBuilder param(String key, Object value) {
             this.params.put(key, value);
             return this;
         }
 
+        /**
+         * Adds multiple query parameters to the request.
+         *
+         * @param params map of parameter names to values
+         * @return this builder for chaining
+         */
         public RequestBuilder params(Map<String, Object> params) {
             this.params.putAll(params);
             return this;
         }
 
+        /**
+         * Sets the JSON body for the request.
+         *
+         * @param json the JSON string body
+         * @return this builder for chaining
+         */
         public RequestBuilder body(String json) {
             this.body = json;
             return this;
         }
 
+        /**
+         * Sets a custom response transformer.
+         *
+         * @param transformer the transformer to use
+         * @return this builder for chaining
+         */
         public RequestBuilder transformer(ResponseTransformer transformer) {
             this.transformer = transformer;
             return this;
         }
 
+        /**
+         * Executes the request and returns the raw JSON response.
+         *
+         * @return the JSON response object
+         * @throws ProxmoxAPIError    if the API returns an error
+         * @throws InterruptedException if the request is interrupted
+         */
         public JsonObject execute() throws ProxmoxAPIError, InterruptedException {
             return client.execute(this, JsonObject.class);
         }
 
+        /**
+         * Executes the request and deserializes the response.
+         *
+         * @param clazz the class to deserialize to
+         * @param <T>   the response type
+         * @return the deserialized response
+         * @throws ProxmoxAPIError    if the API returns an error
+         * @throws InterruptedException if the request is interrupted
+         */
         public <T> T execute(Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
             return client.execute(this, clazz);
         }
-        
+
+        /**
+         * Executes the request and deserializes to a parameterized type (e.g., List).
+         *
+         * @param typeToken the type token for deserialization
+         * @param <T>       the response type
+         * @return the deserialized response
+         * @throws ProxmoxAPIError    if the API returns an error
+         * @throws InterruptedException if the request is interrupted
+         */
         public <T> T executeList(TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
             return client.executeList(this, typeToken);
         }
