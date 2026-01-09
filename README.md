@@ -89,16 +89,15 @@ Proxmox4J is a Java library that provides an object-oriented wrapper around the 
 
 ## Installation
 
-### Maven Central (Coming Soon)
+### Maven Central
 
-Maven Central publishing is currently in progress. For now, these won't work.
 #### Gradle
 
 Add the dependency to your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'fr.freshperf:Proxmox4J:0.1.0'
+    implementation 'fr.freshperf:Proxmox4J:0.1.1'
 }
 ```
 
