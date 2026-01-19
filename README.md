@@ -1,12 +1,12 @@
 <p align="center">
-  <img width="1000" height="250" alt="Proxmox4J logo" src="https://github.com/user-attachments/assets/59989ad8-986d-49f5-8e80-3f1fa37fe158"/>
+  <img width="1000" height="250" alt="PVE4J logo" src="https://github.com/user-attachments/assets/59989ad8-986d-49f5-8e80-3f1fa37fe158"/>
 </p>
 
 <p align="center">
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
-  <a href="https://central.sonatype.com/artifact/fr.freshperf/Proxmox4J"><img src="https://img.shields.io/badge/release-0.1.1-green" alt="Maven Central"></a>
-  <a href="https://github.com/FreshPerf/Proxmox4J/issues"><img src="https://img.shields.io/github/issues/FreshPerf/Proxmox4J" alt="GitHub Issues"></a>
-  <a href="https://github.com/FreshPerf/Proxmox4J/stargazers"><img src="https://img.shields.io/github/stars/FreshPerf/Proxmox4J" alt="GitHub Stars"></a>
+  <a href="https://central.sonatype.com/artifact/fr.freshperf/PVE4J"><img src="https://img.shields.io/badge/release-0.1.1-green" alt="Maven Central"></a>
+  <a href="https://github.com/FreshPerf/PVE4J/issues"><img src="https://img.shields.io/github/issues/FreshPerf/PVE4J" alt="GitHub Issues"></a>
+  <a href="https://github.com/FreshPerf/PVE4J/stargazers"><img src="https://img.shields.io/github/stars/FreshPerf/PVE4J" alt="GitHub Stars"></a>
   <a href="https://freshperf.fr"><img src="https://img.shields.io/badge/FreshPerf-v1.5-blue" alt="FreshPerf"></a>
 </p>
 
@@ -18,7 +18,7 @@
 
 ## Overview
 
-Proxmox4J is a Java library that provides an object-oriented wrapper around the Proxmox Virtual Environment REST API. It enables programmatic management of Proxmox infrastructure with a clean, intuitive, and type-safe interface.
+PVE4J is a Java library that provides an object-oriented wrapper around the Proxmox Virtual Environment REST API. It enables programmatic management of Proxmox infrastructure with a clean, intuitive, and type-safe interface.
 
 **Note:** This library is currently in active development. While core functionality is implemented and stable, some API endpoints may be missing. Contributions and feedback are welcome.
 
@@ -97,7 +97,7 @@ Add the dependency to your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'fr.freshperf:Proxmox4J:0.1.1'
+    implementation 'fr.freshperf:PVE4J:0.1.1'
 }
 ```
 
@@ -108,7 +108,7 @@ Add the dependency:
 ```xml
 <dependency>
     <groupId>fr.freshperf</groupId>
-    <artifactId>Proxmox4J</artifactId>
+    <artifactId>PVE4J</artifactId>
     <version>0.1.1</version>
 </dependency>
 ```
@@ -122,8 +122,8 @@ First, create a `Proxmox` client instance. You can use either an API token (reco
 #### Using API Token (Recommended)
 
 ```java
-import fr.freshperf.proxmox4j.Proxmox;
-import fr.freshperf.proxmox4j.SecurityConfig;
+import fr.freshperf.PVE4J.Proxmox;
+import fr.freshperf.PVE4J.SecurityConfig;
 
 // For production environments with valid SSL certificates
 Proxmox proxmox = Proxmox.create("pve.example.com", 8006, "your-api-token");
@@ -135,9 +135,9 @@ Proxmox proxmoxDev = Proxmox.create("192.168.1.10", 8006, "your-api-token", Secu
 #### Using Username/Password
 
 ```java
-import fr.freshperf.proxmox4j.Proxmox;
-import fr.freshperf.proxmox4j.SecurityConfig;
-import fr.freshperf.proxmox4j.throwable.ProxmoxAPIError;
+import fr.freshperf.PVE4J.Proxmox;
+import fr.freshperf.PVE4J.SecurityConfig;
+import fr.freshperf.PVE4J.throwable.ProxmoxAPIError;
 
 try {
     // With default PAM realm
@@ -155,8 +155,8 @@ try {
 **Get Proxmox Version**
 
 ```java
-import fr.freshperf.proxmox4j.entities.PveVersion;
-import fr.freshperf.proxmox4j.throwable.ProxmoxAPIError;
+import fr.freshperf.PVE4J.entities.PveVersion;
+import fr.freshperf.PVE4J.throwable.ProxmoxAPIError;
 
 try {
     PveVersion version = proxmox.getVersion().execute();
@@ -169,7 +169,7 @@ try {
 **List All QEMU VMs on a Specific Node**
 
 ```java
-import fr.freshperf.proxmox4j.entities.nodes.node.qemu.PveQemuIndex;
+import fr.freshperf.PVE4J.entities.nodes.node.qemu.PveQemuIndex;
 import java.util.List;
 
 try {
@@ -190,12 +190,12 @@ try {
 
 ### Managing VMs and Tasks
 
-Proxmox4J simplifies handling long-running tasks like starting or cloning a VM.
+PVE4J simplifies handling long-running tasks like starting or cloning a VM.
 
 **Start a VM and Wait for Completion**
 
 ```java
-import fr.freshperf.proxmox4j.entities.PveTask;
+import fr.freshperf.PVE4J.entities.PveTask;
 
 try {
     PveTask startTask = proxmox.getNodes()
@@ -216,12 +216,12 @@ try {
 **Clone a VM with an Asynchronous Callback**
 
 ```java
-import fr.freshperf.proxmox4j.entities.nodes.node.qemu.PveQemuCloneOptions;
+import fr.freshperf.PVE4J.entities.nodes.node.qemu.PveQemuCloneOptions;
 
 try {
     PveQemuCloneOptions cloneOptions = PveQemuCloneOptions.builder()
             .name("clone-of-template")
-            .description("A new VM cloned via Proxmox4J")
+            .description("A new VM cloned via PVE4J")
             .build();
             
     proxmox.getNodes()
@@ -326,7 +326,7 @@ Contributions are welcome and appreciated! Here's how you can help:
 
 If you encounter a bug or have a feature request:
 
-1. Check the [issue tracker](https://github.com/FreshPerf/Proxmox4J/issues) to see if it's already reported
+1. Check the [issue tracker](https://github.com/FreshPerf/PVE4J/issues) to see if it's already reported
 2. If not, create a new issue with a clear description
 3. Include code samples, error messages, and your environment details
 
@@ -370,8 +370,8 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 ## Support
 
 - **Documentation:** [Wiki](wiki/Home)
-- **Issues:** [GitHub Issues](https://github.com/FreshPerf/Proxmox4J/issues)
-- **AI Assistant:** [Ask DeepWiki](https://deepwiki.com/FreshPerf/Proxmox4J)
+- **Issues:** [GitHub Issues](https://github.com/FreshPerf/PVE4J/issues)
+- **AI Assistant:** [Ask DeepWiki](https://deepwiki.com/FreshPerf/PVE4J)
 
 ---
 
