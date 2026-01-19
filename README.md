@@ -412,5 +412,5 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 
 ---
 
-<p align="center">Maintainted with with 🩵 by the <a href="https://freshperf.fr" target="_blank">FreshPerf.fr</a> Team.</p>
+<p align="center">Maintainted with 🩵 by the <a href="https://freshperf.fr" target="_blank">FreshPerf.fr</a> Team.</p>
 
