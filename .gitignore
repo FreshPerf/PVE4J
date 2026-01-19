@@ -45,5 +45,5 @@ bin/
 .idea/gradle.xml
 .idea/misc.xml
 .idea/vcs.xml
-src/main/java/fr/freshperf/proxmox4j/TEST.java
+src/main/java/fr/freshperf/pve4j/TEST.java
 /.idea
