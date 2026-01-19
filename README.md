@@ -374,7 +374,7 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 
 ## Support
 
-- **Documentation:** [Wiki](wiki/Home)
+- **Documentation:** [Wiki](https://github.com/FreshPerf/PVE4J/wiki)
 - **Issues:** [GitHub Issues](https://github.com/FreshPerf/PVE4J/issues)
 - **AI Assistant:** [Ask DeepWiki](https://deepwiki.com/FreshPerf/PVE4J)
 
