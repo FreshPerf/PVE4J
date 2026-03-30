@@ -1,6 +1,7 @@
 package fr.freshperf.pve4j.entities.nodes.node.qemu;
 
 import fr.freshperf.pve4j.entities.PveTask;
+import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.PveQemuAgent;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.firewall.PveQemuFirewall;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.snapshot.PveQemuSnapshots;
 import fr.freshperf.pve4j.request.ProxmoxHttpClient;
@@ -57,6 +58,15 @@ public class PveQemuVm {
      */
     public PveQemuSnapshots getSnapshots() {
         return new PveQemuSnapshots(client, nodeName, vmid);
+    }
+
+    /**
+     * Gets the agent interface for this VM.
+     *
+     * @return the agent interface
+     */
+    public PveQemuAgent getAgent() {
+        return new PveQemuAgent(client, nodeName, vmid);
     }
 
     /**
