@@ -1,7 +1,10 @@
-package fr.freshperf.pve4j.entities.nodes.node.qemu.agent.networkInterface;
+package fr.freshperf.pve4j.entities.nodes.node.qemu.agent.networkinterfaces;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Represents network statistics for a guest agent network interface.
+ */
 public class PveQemuAgentNetworkStatistics {
     @SerializedName("rx-Errs")
     private int rxErrs;

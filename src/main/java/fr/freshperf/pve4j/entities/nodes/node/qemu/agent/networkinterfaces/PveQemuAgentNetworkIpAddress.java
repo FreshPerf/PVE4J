@@ -1,7 +1,10 @@
-package fr.freshperf.pve4j.entities.nodes.node.qemu.agent.networkInterface;
+package fr.freshperf.pve4j.entities.nodes.node.qemu.agent.networkinterfaces;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Represents an IP address on a guest agent network interface.
+ */
 public class PveQemuAgentNetworkIpAddress {
     private int prefix;
     @SerializedName("ip-address")

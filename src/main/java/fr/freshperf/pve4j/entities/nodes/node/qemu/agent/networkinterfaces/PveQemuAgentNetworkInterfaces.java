@@ -1,10 +1,13 @@
-package fr.freshperf.pve4j.entities.nodes.node.qemu.agent.networkInterface;
+package fr.freshperf.pve4j.entities.nodes.node.qemu.agent.networkinterfaces;
 
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Arrays;
 
-public class PveQemuAgentNetworkInterface {
+/**
+ * Represents a network interface reported by the guest agent.
+ */
+public class PveQemuAgentNetworkInterfaces {
     private String name;
     @SerializedName("hardware-address")
     private String hardwareAddress;
@@ -19,7 +22,7 @@ public class PveQemuAgentNetworkInterface {
 
     @Override
     public String toString() {
-        return "PveQemuAgentNetworkInterface{" +
+        return "PveQemuAgentNetworkInterfaces{" +
                 "name='" + name + '\'' +
                 ", hardwareAddress='" + hardwareAddress + '\'' +
                 ", ipAddresses=" + Arrays.toString(ipAddresses) +
