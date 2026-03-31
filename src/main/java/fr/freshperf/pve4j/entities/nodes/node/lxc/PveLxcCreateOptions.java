@@ -52,6 +52,9 @@ public class PveLxcCreateOptions implements ParameterizedParamsConvertible<Integ
 
     @Override
     public void populateParams(Map<String, Object> params) {
+        if (ostemplate == null || ostemplate.isBlank()) {
+            throw new IllegalArgumentException("ostemplate cannot be null or empty");
+        }
         ParamsHelpers.put(params, "ostemplate", ostemplate);
         ParamsHelpers.put(params, "hostname", hostname);
         ParamsHelpers.put(params, "description", description);
@@ -90,6 +93,11 @@ public class PveLxcCreateOptions implements ParameterizedParamsConvertible<Integ
     public PveLxcCreateOptions ostemplate(String ostemplate) {
         this.ostemplate = ostemplate;
         return this;
+    }
+
+    /** Indicates whether the required ostemplate was configured. */
+    public boolean hasOstemplate() {
+        return ostemplate != null && !ostemplate.isBlank();
     }
 
     /** Sets the container hostname. */
@@ -201,6 +209,9 @@ public class PveLxcCreateOptions implements ParameterizedParamsConvertible<Integ
      * @return this instance for method chaining
      */
     public PveLxcCreateOptions mp(int index, String config) {
+        if (index < 0) {
+            throw new IllegalArgumentException("mount point index must be >= 0");
+        }
         mountpoints.put("mp" + index, config);
         return this;
     }
@@ -213,6 +224,9 @@ public class PveLxcCreateOptions implements ParameterizedParamsConvertible<Integ
      * @return this instance for method chaining
      */
     public PveLxcCreateOptions net(int index, String config) {
+        if (index < 0) {
+            throw new IllegalArgumentException("network index must be >= 0");
+        }
         networks.put("net" + index, config);
         return this;
     }

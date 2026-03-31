@@ -5,8 +5,11 @@ package fr.freshperf.pve4j.entities.nodes.node.lxc;
  */
 public class PveLxcConfig {
 
-    private String hostname, ostype, arch, cmode, console, tty;
-    private int cores, memory, swap, onboot, protection, unprivileged, template;
+    private String hostname, ostype, arch, cmode;
+    private Boolean console;
+    private Integer tty;
+    private Integer cores, memory, swap;
+    private Boolean onboot, protection, unprivileged, template;
     private String description, tags, digest;
     
     // Network interfaces
@@ -37,40 +40,60 @@ public class PveLxcConfig {
         return cmode;
     }
 
-    public String getConsole() {
+    public Boolean getConsole() {
         return console;
     }
 
-    public String getTty() {
+    public boolean hasConsole() {
+        return Boolean.TRUE.equals(console);
+    }
+
+    public Integer getTty() {
         return tty;
     }
 
-    public int getCores() {
+    public Integer getCores() {
         return cores;
     }
 
-    public int getMemory() {
+    public Integer getMemory() {
         return memory;
     }
 
-    public int getSwap() {
+    public Integer getSwap() {
         return swap;
     }
 
-    public int getOnboot() {
+    public Boolean getOnboot() {
         return onboot;
     }
 
-    public int getProtection() {
+    public boolean isOnboot() {
+        return Boolean.TRUE.equals(onboot);
+    }
+
+    public Boolean getProtection() {
         return protection;
     }
 
-    public int getUnprivileged() {
+    public boolean isProtected() {
+        return Boolean.TRUE.equals(protection);
+    }
+
+    public Boolean getUnprivileged() {
         return unprivileged;
     }
 
-    public int getTemplate() {
+    public boolean isUnprivileged() {
+        return Boolean.TRUE.equals(unprivileged);
+    }
+
+    public Boolean getTemplate() {
         return template;
+    }
+
+    public boolean isTemplate() {
+        return Boolean.TRUE.equals(template);
     }
 
     public String getDescription() {
@@ -161,6 +184,8 @@ public class PveLxcConfig {
                 ", cores=" + cores +
                 ", memory=" + memory +
                 ", arch='" + arch + '\'' +
+                ", unprivileged=" + unprivileged +
+                ", template=" + template +
                 ", rootfs='" + rootfs + '\'' +
                 '}';
     }

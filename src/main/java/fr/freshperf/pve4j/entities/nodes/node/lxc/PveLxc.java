@@ -53,6 +53,9 @@ public record PveLxc(ProxmoxHttpClient client, String nodeName) {
         if (options == null) {
             throw new IllegalArgumentException("options cannot be null - ostemplate is required");
         }
+        if (!options.hasOstemplate()) {
+            throw new IllegalArgumentException("options.ostemplate is required");
+        }
 
         return new ProxmoxRequest<>(() ->
             client.post("nodes/" + nodeName + "/lxc")

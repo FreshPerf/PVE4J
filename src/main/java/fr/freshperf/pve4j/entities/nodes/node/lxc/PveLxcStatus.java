@@ -5,64 +5,81 @@ package fr.freshperf.pve4j.entities.nodes.node.lxc;
  */
 public class PveLxcStatus {
 
-    private int vmid, cpus;
-    private long maxdisk, maxmem, mem, disk, netin, netout, diskread, diskwrite, uptime, maxswap, swap;
-    private float cpu;
-    private String name, status, ha, tags, lock, type;
+    private Integer vmid;
+    private Integer cpus;
+    private Long maxdisk;
+    private Long maxmem;
+    private Long mem;
+    private Long disk;
+    private Long netin;
+    private Long netout;
+    private Long diskread;
+    private Long diskwrite;
+    private Long uptime;
+    private Long maxswap;
+    private Long swap;
+    private Double cpu;
+    private String name;
+    private String status;
+    private PveLxcHa ha;
+    private String tags;
+    private String lock;
+    private String type;
+    private Boolean template;
 
-    public int getVmid() {
+    public Integer getVmid() {
         return vmid;
     }
 
-    public int getCpus() {
+    public Integer getCpus() {
         return cpus;
     }
 
-    public long getMaxdisk() {
+    public Long getMaxdisk() {
         return maxdisk;
     }
 
-    public long getMaxmem() {
+    public Long getMaxmem() {
         return maxmem;
     }
 
-    public long getMem() {
+    public Long getMem() {
         return mem;
     }
 
-    public long getDisk() {
+    public Long getDisk() {
         return disk;
     }
 
-    public long getNetin() {
+    public Long getNetin() {
         return netin;
     }
 
-    public long getNetout() {
+    public Long getNetout() {
         return netout;
     }
 
-    public long getDiskread() {
+    public Long getDiskread() {
         return diskread;
     }
 
-    public long getDiskwrite() {
+    public Long getDiskwrite() {
         return diskwrite;
     }
 
-    public long getUptime() {
+    public Long getUptime() {
         return uptime;
     }
 
-    public long getMaxswap() {
+    public Long getMaxswap() {
         return maxswap;
     }
 
-    public long getSwap() {
+    public Long getSwap() {
         return swap;
     }
 
-    public float getCpu() {
+    public Double getCpu() {
         return cpu;
     }
 
@@ -74,7 +91,7 @@ public class PveLxcStatus {
         return status;
     }
 
-    public String getHa() {
+    public PveLxcHa getHa() {
         return ha;
     }
 
@@ -90,12 +107,21 @@ public class PveLxcStatus {
         return type;
     }
 
+    public Boolean getTemplate() {
+        return template;
+    }
+
+    public boolean isTemplate() {
+        return Boolean.TRUE.equals(template);
+    }
+
     @Override
     public String toString() {
         return "PveLxcStatus{" +
                 "vmid=" + vmid +
                 ", name='" + name + '\'' +
                 ", status='" + status + '\'' +
+                ", template=" + template +
                 ", cpus=" + cpus +
                 ", cpu=" + cpu +
                 ", maxmem=" + maxmem +
