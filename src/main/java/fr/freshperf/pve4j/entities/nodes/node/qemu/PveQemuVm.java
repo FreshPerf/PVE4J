@@ -329,6 +329,34 @@ public class PveQemuVm {
     }
 
     /**
+     * Unlinks one or more disks from this VM.
+     *
+     * @param idlist comma-separated disk IDs to unlink
+     * @return a request that completes when the disks are unlinked
+     */
+    public ProxmoxRequest<Void> unlink(String idlist) {
+        return unlink(idlist, null);
+    }
+
+    /**
+     * Unlinks one or more disks from this VM with options.
+     *
+     * @param idlist  comma-separated disk IDs to unlink
+     * @param options unlink options or null
+     * @return a request that completes when the disks are unlinked
+     */
+    public ProxmoxRequest<Void> unlink(String idlist, PveQemuUnlinkOptions options) {
+        PveQemuUnlinkOptions effectiveOptions = options != null ? options : PveQemuUnlinkOptions.builder();
+
+        return new ProxmoxRequest<>(() -> {
+            client.put("nodes/" + nodeName + "/qemu/" + vmid + "/unlink")
+                .params(effectiveOptions.toParams(idlist))
+                .execute();
+            return null;
+        });
+    }
+
+    /**
      * Resizes a disk of the VM with options.
      *
      * @param disk    the disk to resize (e.g., "scsi0", "virtio0")
