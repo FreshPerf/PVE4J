@@ -1,5 +1,6 @@
 package fr.freshperf.pve4j.entities.nodes.node.qemu;
 
+import com.google.gson.reflect.TypeToken;
 import fr.freshperf.pve4j.entities.PveTask;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.PveQemuAgent;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.firewall.PveQemuFirewall;
@@ -8,10 +9,15 @@ import fr.freshperf.pve4j.request.ProxmoxHttpClient;
 import fr.freshperf.pve4j.request.ProxmoxRequest;
 import fr.freshperf.pve4j.request.TaskResponseTransformer;
 
+import java.util.List;
+import java.util.Set;
+
 /**
  * Facade for managing a specific QEMU VM.
  */
 public class PveQemuVm {
+
+    private static final Set<String> ALLOWED_RRD_TIMEFRAMES = Set.of("hour", "day", "week", "month", "year");
 
     private final ProxmoxHttpClient client;
     private final String nodeName;
@@ -89,6 +95,55 @@ public class PveQemuVm {
         return new ProxmoxRequest<>(() -> 
             client.get("nodes/" + nodeName + "/qemu/" + vmid + "/config")
                 .execute(PveQemuConfig.class)
+        );
+    }
+
+    /**
+     * Gets the pending configuration changes for this VM.
+     *
+     * @return a request returning the pending changes
+     */
+    public ProxmoxRequest<List<PveQemuPendingChange>> getPending() {
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/pending")
+                .executeList(new TypeToken<List<PveQemuPendingChange>>() {})
+        );
+    }
+
+    /**
+     * Gets the cloud-init interface for this VM.
+     *
+     * @return the cloud-init API facade
+     */
+    public PveQemuCloudInit getCloudInit() {
+        return new PveQemuCloudInit(client, nodeName, vmid);
+    }
+
+    /**
+     * Gets the RRD data points for this VM.
+     *
+     * @param timeframe the timeframe (hour, day, week, month, year)
+     * @return a request returning the RRD data points
+     */
+    public ProxmoxRequest<List<PveQemuRrdDataPoint>> getRrdData(String timeframe) {
+        return getRrdData(timeframe, null);
+    }
+
+    /**
+     * Gets the RRD data points for this VM with options.
+     *
+     * @param timeframe the timeframe (hour, day, week, month, year)
+     * @param options   RRD data options or null
+     * @return a request returning the RRD data points
+     */
+    public ProxmoxRequest<List<PveQemuRrdDataPoint>> getRrdData(String timeframe, PveQemuRrdDataOptions options) {
+        validateRrdTimeframe(timeframe);
+        PveQemuRrdDataOptions effectiveOptions = options != null ? options : PveQemuRrdDataOptions.builder();
+
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/rrddata")
+                .params(effectiveOptions.toParams(timeframe))
+                .executeList(new TypeToken<List<PveQemuRrdDataPoint>>() {})
         );
     }
 
@@ -241,6 +296,39 @@ public class PveQemuVm {
     }
 
     /**
+     * Moves a disk to another storage.
+     *
+     * @param disk    the disk to move
+     * @param storage the target storage
+     * @return a request returning the task for tracking
+     */
+    public ProxmoxRequest<PveTask> moveDisk(String disk, String storage) {
+        if (storage == null || storage.isBlank()) {
+            throw new IllegalArgumentException("storage cannot be null or empty");
+        }
+
+        return moveDisk(disk, PveQemuMoveDiskOptions.builder().storage(storage));
+    }
+
+    /**
+     * Moves a disk to another storage or VM with options.
+     *
+     * @param disk    the disk to move
+     * @param options move disk options or null
+     * @return a request returning the task for tracking
+     */
+    public ProxmoxRequest<PveTask> moveDisk(String disk, PveQemuMoveDiskOptions options) {
+        PveQemuMoveDiskOptions effectiveOptions = options != null ? options : PveQemuMoveDiskOptions.builder();
+
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/move_disk")
+                .params(effectiveOptions.toParams(disk))
+                .transformer(new TaskResponseTransformer())
+                .execute(PveTask.class)
+        );
+    }
+
+    /**
      * Resizes a disk of the VM with options.
      *
      * @param disk    the disk to resize (e.g., "scsi0", "virtio0")
@@ -373,5 +461,14 @@ public class PveQemuVm {
                 .transformer(new TaskResponseTransformer())
                 .execute(PveTask.class)
         );
+    }
+
+    private static void validateRrdTimeframe(String timeframe) {
+        if (timeframe == null || timeframe.isBlank()) {
+            throw new IllegalArgumentException("timeframe cannot be null or empty");
+        }
+        if (!ALLOWED_RRD_TIMEFRAMES.contains(timeframe)) {
+            throw new IllegalArgumentException("timeframe must be one of: " + String.join(", ", ALLOWED_RRD_TIMEFRAMES));
+        }
     }
 }
