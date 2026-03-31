@@ -1,6 +1,10 @@
 package fr.freshperf.pve4j.entities.nodes.node.qemu.agent;
 
 import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.hostname.PveQemuAgentHostNameResult;
+import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.fsfreeze.PveQemuAgentFsFreezeResult;
+import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.fsfreeze.PveQemuAgentFsFreezeStatusResult;
+import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.fsinfo.PveQemuAgentFsInfoResult;
+import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.fstrim.PveQemuAgentFstrimResult;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.info.PveQemuAgentInfoResult;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.networkinterfaces.PveQemuAgentNetworkInterfacesResult;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.agent.osinfo.PveQemuAgentOsInfoResult;
@@ -55,6 +59,15 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
     }
 
     /**
+     * Gets mounted filesystem information reported by the guest agent.
+     *
+     * @return a request returning filesystem information
+     */
+    public ProxmoxRequest<PveQemuAgentFsInfoResult> getFsInfo() {
+        return get("get-fsinfo", PveQemuAgentFsInfoResult.class);
+    }
+
+    /**
      * Gets guest operating system information.
      *
      * @return a request returning OS information
@@ -106,6 +119,42 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      */
     public ProxmoxRequest<PveQemuAgentNetworkInterfacesResult> getNetworkInterfaces() {
         return get("network-get-interfaces", PveQemuAgentNetworkInterfacesResult.class);
+    }
+
+    /**
+     * Gets the guest filesystem freeze state.
+     *
+     * @return a request returning the current freeze status
+     */
+    public ProxmoxRequest<PveQemuAgentFsFreezeStatusResult> getFsFreezeStatus() {
+        return post("fsfreeze-status", PveQemuAgentFsFreezeStatusResult.class);
+    }
+
+    /**
+     * Freezes guest filesystems and returns the number of frozen filesystems.
+     *
+     * @return a request returning the number of frozen filesystems
+     */
+    public ProxmoxRequest<PveQemuAgentFsFreezeResult> fsFreeze() {
+        return post("fsfreeze-freeze", PveQemuAgentFsFreezeResult.class);
+    }
+
+    /**
+     * Thaws guest filesystems and returns the number of thawed filesystems.
+     *
+     * @return a request returning the number of thawed filesystems
+     */
+    public ProxmoxRequest<PveQemuAgentFsFreezeResult> fsThaw() {
+        return post("fsfreeze-thaw", PveQemuAgentFsFreezeResult.class);
+    }
+
+    /**
+     * Trims guest filesystems and returns trim status per path.
+     *
+     * @return a request returning trim status per filesystem path
+     */
+    public ProxmoxRequest<PveQemuAgentFstrimResult> fstrim() {
+        return post("fstrim", PveQemuAgentFstrimResult.class);
     }
 
     /**
