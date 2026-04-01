@@ -116,7 +116,7 @@ Add the dependency to your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'fr.freshperf:PVE4J:0.1.3'
+    implementation 'fr.freshperf:PVE4J:0.2.0'
 }
 ```
 
@@ -128,7 +128,7 @@ Add the dependency:
 <dependency>
     <groupId>fr.freshperf</groupId>
     <artifactId>PVE4J</artifactId>
-    <version>0.1.3</version>
+    <version>0.2.0</version>
 </dependency>
 ```
 
