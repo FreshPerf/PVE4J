@@ -351,7 +351,6 @@ For detailed documentation, please refer to the [Wiki](https://github.com/FreshP
 - [Getting Started](https://github.com/FreshPerf/PVE4J/wiki/Getting-Started)
 - [Authentication](https://github.com/FreshPerf/PVE4J/wiki/Authentication)
 - [Client Configuration](https://github.com/FreshPerf/PVE4J/wiki/Client-Configuration)
-- [Coverage and Limitations](https://github.com/FreshPerf/PVE4J/wiki/Coverage-and-Limitations)
 - [Request API](https://github.com/FreshPerf/PVE4J/wiki/Request-API)
 - [VM Management](https://github.com/FreshPerf/PVE4J/wiki/VM-Management)
 - [Firewall Management](https://github.com/FreshPerf/PVE4J/wiki/Firewall-Management)
