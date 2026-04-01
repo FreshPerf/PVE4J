@@ -21,32 +21,16 @@ import fr.freshperf.pve4j.request.ProxmoxRequest;
  */
 public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid) {
 
-    private String path(String suffix) {
-        return "nodes/" + nodeName + "/qemu/" + vmid + "/agent/" + suffix;
-    }
-
-    private <T> ProxmoxRequest<T> get(String suffix, Class<T> clazz) {
-        return new ProxmoxRequest<>(() -> client.get(path(suffix)).execute(clazz));
-    }
-
-    private <T> ProxmoxRequest<T> post(String suffix, Class<T> clazz) {
-        return new ProxmoxRequest<>(() -> client.post(path(suffix)).execute(clazz));
-    }
-
-    private ProxmoxRequest<Void> postWithoutResult(String suffix) {
-        return new ProxmoxRequest<>(() -> {
-            client.post(path(suffix)).execute();
-            return null;
-        });
-    }
-
     /**
      * Gets guest agent general information and supported commands.
      *
      * @return a request returning guest agent information
      */
     public ProxmoxRequest<PveQemuAgentInfoResult> getInfo() {
-        return get("info", PveQemuAgentInfoResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/info")
+                .execute(PveQemuAgentInfoResult.class)
+        );
     }
 
     /**
@@ -55,7 +39,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning the hostname
      */
     public ProxmoxRequest<PveQemuAgentHostNameResult> getHostName() {
-        return get("get-host-name", PveQemuAgentHostNameResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/get-host-name")
+                .execute(PveQemuAgentHostNameResult.class)
+        );
     }
 
     /**
@@ -64,7 +51,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning filesystem information
      */
     public ProxmoxRequest<PveQemuAgentFsInfoResult> getFsInfo() {
-        return get("get-fsinfo", PveQemuAgentFsInfoResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/get-fsinfo")
+                .execute(PveQemuAgentFsInfoResult.class)
+        );
     }
 
     /**
@@ -73,7 +63,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning OS information
      */
     public ProxmoxRequest<PveQemuAgentOsInfoResult> getOsInfo() {
-        return get("get-osinfo", PveQemuAgentOsInfoResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/get-osinfo")
+                .execute(PveQemuAgentOsInfoResult.class)
+        );
     }
 
     /**
@@ -82,7 +75,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning the guest time
      */
     public ProxmoxRequest<PveQemuAgentTimeResult> getTime() {
-        return get("get-time", PveQemuAgentTimeResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/get-time")
+                .execute(PveQemuAgentTimeResult.class)
+        );
     }
 
     /**
@@ -91,7 +87,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning the guest timezone
      */
     public ProxmoxRequest<PveQemuAgentTimezoneResult> getTimezone() {
-        return get("get-timezone", PveQemuAgentTimezoneResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/get-timezone")
+                .execute(PveQemuAgentTimezoneResult.class)
+        );
     }
 
     /**
@@ -100,7 +99,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning guest users
      */
     public ProxmoxRequest<PveQemuAgentUsersResult> getUsers() {
-        return get("get-users", PveQemuAgentUsersResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/get-users")
+                .execute(PveQemuAgentUsersResult.class)
+        );
     }
 
     /**
@@ -109,7 +111,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning guest vCPU information
      */
     public ProxmoxRequest<PveQemuAgentVcpusResult> getVcpus() {
-        return get("get-vcpus", PveQemuAgentVcpusResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/get-vcpus")
+                .execute(PveQemuAgentVcpusResult.class)
+        );
     }
 
     /**
@@ -118,7 +123,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning guest network interfaces
      */
     public ProxmoxRequest<PveQemuAgentNetworkInterfacesResult> getNetworkInterfaces() {
-        return get("network-get-interfaces", PveQemuAgentNetworkInterfacesResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/qemu/" + vmid + "/agent/network-get-interfaces")
+                .execute(PveQemuAgentNetworkInterfacesResult.class)
+        );
     }
 
     /**
@@ -127,7 +135,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning the current freeze status
      */
     public ProxmoxRequest<PveQemuAgentFsFreezeStatusResult> getFsFreezeStatus() {
-        return post("fsfreeze-status", PveQemuAgentFsFreezeStatusResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/agent/fsfreeze-status")
+                .execute(PveQemuAgentFsFreezeStatusResult.class)
+        );
     }
 
     /**
@@ -136,7 +147,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning the number of frozen filesystems
      */
     public ProxmoxRequest<PveQemuAgentFsFreezeResult> fsFreeze() {
-        return post("fsfreeze-freeze", PveQemuAgentFsFreezeResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/agent/fsfreeze-freeze")
+                .execute(PveQemuAgentFsFreezeResult.class)
+        );
     }
 
     /**
@@ -145,7 +159,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning the number of thawed filesystems
      */
     public ProxmoxRequest<PveQemuAgentFsFreezeResult> fsThaw() {
-        return post("fsfreeze-thaw", PveQemuAgentFsFreezeResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/agent/fsfreeze-thaw")
+                .execute(PveQemuAgentFsFreezeResult.class)
+        );
     }
 
     /**
@@ -154,7 +171,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning trim status per filesystem path
      */
     public ProxmoxRequest<PveQemuAgentFstrimResult> fstrim() {
-        return post("fstrim", PveQemuAgentFstrimResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/agent/fstrim")
+                .execute(PveQemuAgentFstrimResult.class)
+        );
     }
 
     /**
@@ -163,7 +183,10 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request returning the guest agent ping result
      */
     public ProxmoxRequest<PveQemuAgentPingResult> ping() {
-        return post("ping", PveQemuAgentPingResult.class);
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/agent/ping")
+                .execute(PveQemuAgentPingResult.class)
+        );
     }
 
     /**
@@ -172,7 +195,11 @@ public record PveQemuAgent (ProxmoxHttpClient client, String nodeName, int vmid)
      * @return a request that completes when the shutdown command is accepted
      */
     public ProxmoxRequest<Void> shutdown() {
-        return postWithoutResult("shutdown");
+        return new ProxmoxRequest<>(() -> {
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/agent/shutdown")
+                .execute();
+            return null;
+        });
     }
 
 }
