@@ -38,7 +38,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
 - **Type-Safe Entities** - Maps Proxmox API responses to strongly-typed Java objects
 - **Configurable Security** - Easily manage SSL/TLS certificate and hostname verification for different environments
 - **Detailed VM Management** - Create, clone, delete, resize disks, and update configurations for QEMU VMs with type-safe builder options
-- **Firewall Management** - Configure firewall options and manage IP Sets for QEMU VMs
+- **Firewall Management** - Configure firewall options, rules, and IP Sets for QEMU VMs
 - **Storage Management** - Query storage status, list content, and retrieve statistics
 
 ## Current Implementation Status
@@ -49,7 +49,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - Cluster status and resources
   - Next available VMID retrieval
   - Resource filtering by type
-  - **HA (High Availability) management** - List/create/delete HA resources and groups
+  - **HA (High Availability) management** - List/get/create/delete HA resources and change requested state
 
 - **Node Management**
   - List all nodes
@@ -60,12 +60,14 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - **VM creation** with comprehensive options (CPU, memory, disks, networks, etc.)
   - List, clone, and delete VMs
   - VM lifecycle operations (start, stop, shutdown, reboot, reset, suspend, resume)
-  - VM configuration management (get/update)
+  - VM configuration management (get/update) and pending changes
   - Disk resizing
   - VNC proxy access
   - **Backup operations** (vzdump with options)
   - **Migration** to other nodes (online/offline)
   - **Convert to template**
+  - **Cloud-init helpers**
+  - **Guest agent operations**
   - Firewall options and IP Set management
   - **Firewall rules management** (list, create, update, delete rules)
   - **Snapshot management** (list, create, delete, rollback, update description)
@@ -74,7 +76,10 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - **Container creation** with comprehensive options (templates, networks, mount points, etc.)
   - List and query containers
   - Container lifecycle operations (start, stop, shutdown, reboot, suspend, resume)
-  - Container configuration retrieval
+  - Container configuration retrieval and updates
+  - Pending changes, interfaces, and feature checks
+  - Clone, migrate, and convert to template
+  - Snapshot management
   - Container deletion
 
 - **Storage Management**
@@ -97,11 +102,9 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - Add/remove VMs and storage to/from pools
   - Update pool configuration
 
-### Planned/In Progress
+### Scope Note
 
-- Additional network configuration options
-- Restore operations from backups
-- SDN (Software Defined Networking) features
+PVE4J is already very usable for common compute automation workflows, but it does not aim to cover every Proxmox VE endpoint yet. For a more detailed map of the current scope, see the wiki pages linked below.
 
 ## Installation
 
@@ -138,8 +141,8 @@ First, create a `Proxmox` client instance. You can use either an API token (reco
 #### Using API Token (Recommended)
 
 ```java
-import fr.freshperf.PVE4J.Proxmox;
-import fr.freshperf.PVE4J.SecurityConfig;
+import fr.freshperf.pve4j.Proxmox;
+import fr.freshperf.pve4j.SecurityConfig;
 
 // For production environments with valid SSL certificates
 Proxmox proxmox = Proxmox.create("pve.example.com", 8006, "your-api-token");
@@ -151,9 +154,9 @@ Proxmox proxmoxDev = Proxmox.create("192.168.1.10", 8006, "your-api-token", Secu
 #### Using Username/Password
 
 ```java
-import fr.freshperf.PVE4J.Proxmox;
-import fr.freshperf.PVE4J.SecurityConfig;
-import fr.freshperf.PVE4J.throwable.ProxmoxAPIError;
+import fr.freshperf.pve4j.Proxmox;
+import fr.freshperf.pve4j.SecurityConfig;
+import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 
 try {
     // With default PAM realm
@@ -171,8 +174,8 @@ try {
 **Get Proxmox Version**
 
 ```java
-import fr.freshperf.PVE4J.entities.PveVersion;
-import fr.freshperf.PVE4J.throwable.ProxmoxAPIError;
+import fr.freshperf.pve4j.entities.PveVersion;
+import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 
 try {
     PveVersion version = proxmox.getVersion().execute();
@@ -185,7 +188,7 @@ try {
 **List All QEMU VMs on a Specific Node**
 
 ```java
-import fr.freshperf.PVE4J.entities.nodes.node.qemu.PveQemuIndex;
+import fr.freshperf.pve4j.entities.nodes.node.qemu.PveQemuIndex;
 import java.util.List;
 
 try {
@@ -211,7 +214,7 @@ PVE4J simplifies handling long-running tasks like starting or cloning a VM.
 **Start a VM and Wait for Completion**
 
 ```java
-import fr.freshperf.PVE4J.entities.PveTask;
+import fr.freshperf.pve4j.entities.PveTask;
 
 try {
     PveTask startTask = proxmox.getNodes()
@@ -232,13 +235,12 @@ try {
 **Clone a VM with an Asynchronous Callback**
 
 ```java
-import fr.freshperf.PVE4J.entities.nodes.node.qemu.PveQemuCloneOptions;
+import fr.freshperf.pve4j.entities.nodes.node.qemu.PveQemuCloneOptions;
 
 try {
     PveQemuCloneOptions cloneOptions = PveQemuCloneOptions.builder()
             .name("clone-of-template")
-            .description("A new VM cloned via PVE4J")
-            .build();
+            .description("A new VM cloned via PVE4J");
             
     proxmox.getNodes()
             .get("pve-node-01")
@@ -283,14 +285,19 @@ The library's functionality is structured hierarchically, starting from the main
         - `.cloneVm()`, `.resize()`, `.delete()`
         - `.updateConfig()`, `.getConfig()`, `.getStatus()`
         - `.backup(options)` - Create a backup
-        - `.migrate(targetNode)` - Migrate to another node
+        - `.migrate(targetNode, online, targetStorage)` - Migrate to another node
         - `.template()` - Convert to template
+        - `.getCloudInit()`, `.getAgent()`, `.getVnc()`, `.getRrdData()`
         - `.getFirewall()` - Manage VM firewall settings
           - `.getRules()` - Manage firewall rules
         - `.getSnapshots()` - Manage VM snapshots
     - `.getLxc()` - Manage LXC containers on the node
       - `.create(vmid, options)` - Create a new container
       - `.get(vmid)` - Access a specific container
+        - `.updateConfig()`, `.getConfig()`, `.getStatus()`, `.getPending()`
+        - `.getInterfaces()`, `.getFeature()`
+        - `.cloneContainer()`, `.migrate()`, `.template()`, `.delete()`
+        - `.getSnapshots()` - Manage container snapshots
     - `.getStorage()` - Manage storage pools on the node
 - `proxmox.getPools()` - Manage resource pools
   - `.list()` - List all resource pools
@@ -344,8 +351,10 @@ For detailed documentation, please refer to the [Wiki](https://github.com/FreshP
 - [Getting Started](https://github.com/FreshPerf/PVE4J/wiki/Getting-Started)
 - [Authentication](https://github.com/FreshPerf/PVE4J/wiki/Authentication)
 - [Client Configuration](https://github.com/FreshPerf/PVE4J/wiki/Client-Configuration)
+- [Coverage and Limitations](https://github.com/FreshPerf/PVE4J/wiki/Coverage-and-Limitations)
 - [Request API](https://github.com/FreshPerf/PVE4J/wiki/Request-API)
 - [VM Management](https://github.com/FreshPerf/PVE4J/wiki/VM-Management)
+- [Firewall Management](https://github.com/FreshPerf/PVE4J/wiki/Firewall-Management)
 - [Snapshot Management](https://github.com/FreshPerf/PVE4J/wiki/Snapshot-Management)
 - [Container Management](https://github.com/FreshPerf/PVE4J/wiki/Container-Management)
 - [Cluster Operations](https://github.com/FreshPerf/PVE4J/wiki/Cluster-Operations)
