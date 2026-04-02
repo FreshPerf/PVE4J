@@ -1,0 +1,68 @@
+name: Update Release Versions
+
+on:
+  push:
+    paths:
+      - "build.gradle"
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get NEW version from Gradle
+        id: new
+        run: |
+          NEW_VERSION=$(grep "^version" build.gradle* | sed 's/.*=[ "]//;s/"//')
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "NEW_VERSION=$NEW_VERSION"
+
+      - name: Get OLD version from Git history
+        id: old
+        run: |
+          git show HEAD~1:build.gradle* | grep "^version" > old_version_line.txt
+          OLD_VERSION=$(sed 's/.*=[ "]//;s/"//' old_version_line.txt)
+          echo "version=$OLD_VERSION" >> $GITHUB_OUTPUT
+          echo "OLD_VERSION=$OLD_VERSION"
+
+      - name: Checkout Wiki
+        run: |
+          git clone https://github.com/${GITHUB_REPOSITORY}.wiki.git wiki
+
+      - name: Replace OLD version → NEW version everywhere
+        run: |
+          OLD="${{ steps.old.outputs.version }}"
+          NEW="${{ steps.new.outputs.version }}"
+
+          echo "Replacing $OLD -> $NEW"
+
+          find . -maxdepth 1 -name "*.md" -exec \
+            sed -i "s/$OLD/$NEW/g" {} \;
+
+          find wiki -type f -name "*.md" -exec \
+            sed -i "s/$OLD/$NEW/g" {} \;
+
+      - name: Commit & push changes
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          OLD="${{ steps.old.outputs.version }}"
+          NEW="${{ steps.new.outputs.version }}"
+
+          git add README.md || true
+          git add *.md || true
+          git add wiki || true
+
+          if git commit -m "Update version $OLD -> $NEW"; then
+            git push
+            cd wiki
+            git push
+          else
+            echo "No changes to commit"
+          fi
