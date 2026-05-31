@@ -4,6 +4,7 @@ import com.google.gson.reflect.TypeToken;
 import fr.freshperf.pve4j.entities.nodes.node.qemu.PveQemu;
 import fr.freshperf.pve4j.entities.nodes.node.lxc.PveLxc;
 import fr.freshperf.pve4j.entities.nodes.node.storage.PveStorage;
+import fr.freshperf.pve4j.entities.nodes.node.vzdump.PveVzdump;
 import fr.freshperf.pve4j.request.ProxmoxHttpClient;
 import fr.freshperf.pve4j.request.ProxmoxRequest;
 
@@ -20,6 +21,7 @@ public class PveNode {
     private final PveQemu pveQemu;
     private final PveLxc pveLxc;
     private final PveStorage pveStorage;
+    private final PveVzdump pveVzdump;
 
     /**
      * Creates a new node facade.
@@ -34,6 +36,7 @@ public class PveNode {
         this.pveQemu = new PveQemu(client, nodeName);
         this.pveLxc = new PveLxc(client, nodeName);
         this.pveStorage = new PveStorage(client, nodeName);
+        this.pveVzdump = new PveVzdump(client, nodeName);
     }
 
     /**
@@ -96,6 +99,15 @@ public class PveNode {
         return pveStorage;
     }
 
+    /**
+     * Gets the vzdump backup management interface for this node.
+     *
+     * @return the vzdump API facade
+     */
+    public PveVzdump getVzdump() {
+        return pveVzdump;
+    }
+
     @Override
     public String toString() {
         return "PveNode{" +
@@ -104,6 +116,7 @@ public class PveNode {
                 ", pveQemu=" + pveQemu +
                 ", pveLxc=" + pveLxc +
                 ", pveStorage=" + pveStorage +
+                ", pveVzdump=" + pveVzdump +
                 '}';
     }
 }

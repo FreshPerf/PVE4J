@@ -38,8 +38,9 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
 - **Type-Safe Entities** - Maps Proxmox API responses to strongly-typed Java objects
 - **Configurable Security** - Easily manage SSL/TLS certificate and hostname verification for different environments
 - **Detailed VM Management** - Create, clone, delete, resize disks, and update configurations for QEMU VMs with type-safe builder options
+- **Backup Lifecycle** - Create backups (vzdump), restore VMs from archives, manage backup files (notes, protection, deletion), apply retention/pruning, and drive scheduled cluster backup jobs
 - **Firewall Management** - Configure firewall options, rules, and IP Sets for QEMU VMs
-- **Storage Management** - Query storage status, list content, and retrieve statistics
+- **Storage Management** - Query storage status, list content, manage backup volumes, and retrieve statistics
 
 ## Current Implementation Status
 
@@ -50,6 +51,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - Next available VMID retrieval
   - Resource filtering by type
   - **HA (High Availability) management** - List/get/create/delete HA resources and change requested state
+  - **Scheduled backup jobs** - List/get/create/update/delete jobs, inspect included volumes, and find guests not covered by any job
 
 - **Node Management**
   - List all nodes
@@ -63,7 +65,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - VM configuration management (get/update) and pending changes
   - Disk resizing
   - VNC proxy access
-  - **Backup operations** (vzdump with options)
+  - **Backup operations** (vzdump with full options) and **restore from a backup archive**
   - **Migration** to other nodes (online/offline)
   - **Convert to template**
   - **Cloud-init helpers**
@@ -86,6 +88,14 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - List storage pools
   - Storage status and content
   - RRD statistics
+  - **Backup files** - List/filter backups, read & edit volume attributes (notes, protection), delete volumes, and prune by retention
+
+- **Backup Management**
+  - Node-level `vzdump` backups (single VM, list of VMIDs, pool, or all guests)
+  - Read configured backup defaults and extract a guest config from an archive
+  - Restore a QEMU VM from a backup archive
+  - Backup file management and retention/pruning on storage
+  - Cluster-wide scheduled backup jobs
 
 - **Access Control**
   - User management
@@ -275,10 +285,14 @@ The library's functionality is structured hierarchically, starting from the main
   - `.getHa()` - Manage High Availability
     - `.listResources()`, `.getResource()`, `.createResource()`, `.deleteResource()`
     - `.setResourceState()` - Change HA resource state
+  - `.getBackup()` - Manage scheduled backup jobs
+    - `.getJobs()`, `.getJob(id)`, `.createJob()`, `.updateJob()`, `.deleteJob()`
+    - `.getIncludedVolumes(id)`, `.getGuestsNotBackedUp()`
 - `proxmox.getNodes()` - List all nodes in the cluster
   - `.get("node-name")` - Access a specific node by its name
     - `.getQemu()` - Manage QEMU VMs on the node
       - `.create(vmid, options)` - Create a new VM
+      - `.restore(vmid, options)` - Restore a VM from a backup archive
       - `.get(vmid)` - Access a specific VM
         - `.start()`, `.stop()`, `.shutdown()`, `.reboot()`, `.reset()`
         - `.suspend()`, `.resume()`
@@ -299,6 +313,11 @@ The library's functionality is structured hierarchically, starting from the main
         - `.cloneContainer()`, `.migrate()`, `.template()`, `.delete()`
         - `.getSnapshots()` - Manage container snapshots
     - `.getStorage()` - Manage storage pools on the node
+      - `.get(storage)` - Access a specific storage
+        - `.getBackups(vmid)`, `.getVolume(volid)`, `.updateVolumeAttributes()`, `.deleteVolume(volid)`
+        - `.getPruneBackups(options)`, `.pruneBackups(options)` - Retention management
+    - `.getVzdump()` - Node-level backups
+      - `.backup(options)`, `.getDefaults()`, `.extractConfig(volid)`
 - `proxmox.getPools()` - Manage resource pools
   - `.list()` - List all resource pools
   - `.create()` - Create a new pool
@@ -353,6 +372,7 @@ For detailed documentation, please refer to the [Wiki](https://github.com/FreshP
 - [Client Configuration](https://github.com/FreshPerf/PVE4J/wiki/Client-Configuration)
 - [Request API](https://github.com/FreshPerf/PVE4J/wiki/Request-API)
 - [VM Management](https://github.com/FreshPerf/PVE4J/wiki/VM-Management)
+- [Backup Management](https://github.com/FreshPerf/PVE4J/wiki/Backup-Management)
 - [Firewall Management](https://github.com/FreshPerf/PVE4J/wiki/Firewall-Management)
 - [Snapshot Management](https://github.com/FreshPerf/PVE4J/wiki/Snapshot-Management)
 - [Container Management](https://github.com/FreshPerf/PVE4J/wiki/Container-Management)

@@ -72,5 +72,36 @@ public record PveQemu(ProxmoxHttpClient client, String nodeName) {
                 .execute(PveTask.class)
         );
     }
+
+    /**
+     * Restores a QEMU VM from a backup archive.
+     *
+     * <p>This wraps {@code POST /nodes/{node}/qemu} in its {@code qmrestore} mode (driven by
+     * the {@code archive} option). Use {@link PveQemuRestoreOptions#force(Boolean)} to
+     * overwrite an existing VM with the same VMID.</p>
+     *
+     * @param vmid    the target VM ID (must be &gt;= 100)
+     * @param options the restore options; {@link PveQemuRestoreOptions#archive(String)} is required
+     * @return a request returning the task for tracking
+     * @throws IllegalArgumentException if vmid is less than 100, options is null, or no archive is set
+     */
+    public ProxmoxRequest<PveTask> restore(int vmid, PveQemuRestoreOptions options) {
+        if (vmid < 100) {
+            throw new IllegalArgumentException("VMID must be >= 100");
+        }
+        if (options == null) {
+            throw new IllegalArgumentException("options cannot be null");
+        }
+        if (options.getArchive() == null || options.getArchive().isBlank()) {
+            throw new IllegalArgumentException("a backup archive must be set via options.archive(...)");
+        }
+
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu")
+                .params(options.toParams(vmid))
+                .transformer(new TaskResponseTransformer())
+                .execute(PveTask.class)
+        );
+    }
 }
 

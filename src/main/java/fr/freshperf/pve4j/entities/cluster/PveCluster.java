@@ -1,6 +1,7 @@
 package fr.freshperf.pve4j.entities.cluster;
 
 import com.google.gson.reflect.TypeToken;
+import fr.freshperf.pve4j.entities.cluster.backup.PveClusterBackup;
 import fr.freshperf.pve4j.entities.cluster.ha.PveHa;
 import fr.freshperf.pve4j.entities.cluster.resources.PveClusterResources;
 import fr.freshperf.pve4j.request.ProxmoxHttpClient;
@@ -20,6 +21,15 @@ public record PveCluster(ProxmoxHttpClient httpClient) {
      */
     public PveHa getHa() {
         return new PveHa(httpClient);
+    }
+
+    /**
+     * Gets the cluster-wide backup job management interface.
+     *
+     * @return the backup API facade
+     */
+    public PveClusterBackup getBackup() {
+        return new PveClusterBackup(httpClient);
     }
 
     /**
