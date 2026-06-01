@@ -46,6 +46,12 @@ public class PveFirewallRule {
     @SerializedName("log")
     private String log;
 
+    @SerializedName("icmp-type")
+    private String icmpType;
+
+    @SerializedName("ipversion")
+    private Integer ipversion;
+
     /**
      * Gets the rule position.
      *
@@ -56,7 +62,7 @@ public class PveFirewallRule {
     }
 
     /**
-     * Gets the rule type ("in", "out", "group").
+     * Gets the rule type ("in", "out", "forward", "group").
      *
      * @return the type
      */
@@ -170,6 +176,24 @@ public class PveFirewallRule {
      */
     public String getLog() {
         return log;
+    }
+
+    /**
+     * Gets the ICMP type (valid only for icmp/icmpv6 protocols).
+     *
+     * @return the ICMP type, or null
+     */
+    public String getIcmpType() {
+        return icmpType;
+    }
+
+    /**
+     * Gets the IP version (4 or 6), automatically determined from source/dest.
+     *
+     * @return the IP version, or null
+     */
+    public Integer getIpversion() {
+        return ipversion;
     }
 
     @Override

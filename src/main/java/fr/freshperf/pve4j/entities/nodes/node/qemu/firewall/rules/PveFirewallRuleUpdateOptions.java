@@ -6,10 +6,13 @@ import fr.freshperf.pve4j.util.ParamsHelpers;
 import java.util.Map;
 
 /**
- * Options for creating a firewall rule.
- * Use the builder pattern to configure rule settings.
+ * Options for updating an existing firewall rule (PUT on a rule position).
+ * All fields are optional; only the configured ones are sent.
+ *
+ * <p>Unlike {@link PveFirewallRuleCreateOptions}, this supports the update-only
+ * parameters {@code moveto} (relocate the rule) and {@code delete} (clear settings).</p>
  */
-public class PveFirewallRuleCreateOptions implements ParamsConvertible {
+public class PveFirewallRuleUpdateOptions implements ParamsConvertible {
 
     private String type;
     private String action;
@@ -24,16 +27,17 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
     private String iface;
     private String log;
     private String icmpType;
+    private Integer moveto;
+    private String delete;
     private String digest;
-    private Integer pos;
 
     /**
-     * Creates a new builder for firewall rule create options.
+     * Creates a new builder for firewall rule update options.
      *
-     * @return a new PveFirewallRuleCreateOptions instance
+     * @return a new PveFirewallRuleUpdateOptions instance
      */
-    public static PveFirewallRuleCreateOptions builder() {
-        return new PveFirewallRuleCreateOptions();
+    public static PveFirewallRuleUpdateOptions builder() {
+        return new PveFirewallRuleUpdateOptions();
     }
 
     @Override
@@ -51,31 +55,26 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
         ParamsHelpers.put(params, "iface", iface);
         ParamsHelpers.put(params, "log", log);
         ParamsHelpers.put(params, "icmp-type", icmpType);
+        ParamsHelpers.putInt(params, "moveto", moveto);
+        ParamsHelpers.put(params, "delete", delete);
         ParamsHelpers.put(params, "digest", digest);
-        ParamsHelpers.putInt(params, "pos", pos);
     }
 
     /**
-     * Sets the rule type (REQUIRED).
+     * Sets the rule type.
      *
-     * @param type "in" (incoming), "out" (outgoing), "forward", or "group"
+     * @param type "in", "out", "forward", or "group"
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions type(String type) {
-        this.type = type;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions type(String type) { this.type = type; return this; }
 
     /**
-     * Sets the rule action (REQUIRED).
+     * Sets the rule action.
      *
-     * @param action "ACCEPT", "DROP", or "REJECT"
+     * @param action "ACCEPT", "DROP", "REJECT", or a security group name
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions action(String action) {
-        this.action = action;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions action(String action) { this.action = action; return this; }
 
     /**
      * Sets whether the rule is enabled.
@@ -83,32 +82,23 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
      * @param enable true to enable
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions enable(Boolean enable) {
-        this.enable = enable;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions enable(Boolean enable) { this.enable = enable; return this; }
 
     /**
      * Sets the source address/network.
      *
-     * @param source IP, CIDR, or alias (e.g., "192.168.1.0/24")
+     * @param source IP, CIDR, IP set ("+name"), or alias
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions source(String source) {
-        this.source = source;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions source(String source) { this.source = source; return this; }
 
     /**
      * Sets the destination address/network.
      *
-     * @param dest IP, CIDR, or alias
+     * @param dest IP, CIDR, IP set ("+name"), or alias
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions dest(String dest) {
-        this.dest = dest;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions dest(String dest) { this.dest = dest; return this; }
 
     /**
      * Sets the protocol.
@@ -116,32 +106,23 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
      * @param proto "tcp", "udp", "icmp", etc.
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions proto(String proto) {
-        this.proto = proto;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions proto(String proto) { this.proto = proto; return this; }
 
     /**
      * Sets the source port(s).
      *
-     * @param sport port number or range (e.g., "80", "1024:65535")
+     * @param sport port number or range
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions sport(String sport) {
-        this.sport = sport;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions sport(String sport) { this.sport = sport; return this; }
 
     /**
      * Sets the destination port(s).
      *
-     * @param dport port number or range (e.g., "443", "8000:8080")
+     * @param dport port number or range
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions dport(String dport) {
-        this.dport = dport;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions dport(String dport) { this.dport = dport; return this; }
 
     /**
      * Sets the rule comment.
@@ -149,10 +130,7 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
      * @param comment description of the rule
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions comment(String comment) {
-        this.comment = comment;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions comment(String comment) { this.comment = comment; return this; }
 
     /**
      * Sets a predefined macro.
@@ -160,10 +138,7 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
      * @param macro macro name (e.g., "SSH", "HTTP", "Ping")
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions macro(String macro) {
-        this.macro = macro;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions macro(String macro) { this.macro = macro; return this; }
 
     /**
      * Sets the network interface.
@@ -171,21 +146,15 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
      * @param iface interface name (e.g., "net0")
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions iface(String iface) {
-        this.iface = iface;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions iface(String iface) { this.iface = iface; return this; }
 
     /**
      * Sets the log level.
      *
-     * @param log "nolog", "info", "warning", "err", "crit", "alert", "emerg"
+     * @param log "nolog", "debug", "info", "notice", "warning", "err", "crit", "alert", "emerg"
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions log(String log) {
-        this.log = log;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions log(String log) { this.log = log; return this; }
 
     /**
      * Sets the ICMP type. Only valid if proto equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
@@ -193,10 +162,23 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
      * @param icmpType the ICMP type
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions icmpType(String icmpType) {
-        this.icmpType = icmpType;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions icmpType(String icmpType) { this.icmpType = icmpType; return this; }
+
+    /**
+     * Moves the rule to a new position. Other arguments are ignored by the API when set.
+     *
+     * @param moveto the new position (>= 0)
+     * @return this instance for method chaining
+     */
+    public PveFirewallRuleUpdateOptions moveto(Integer moveto) { this.moveto = moveto; return this; }
+
+    /**
+     * Sets a comma-separated list of settings to delete from the rule.
+     *
+     * @param delete the settings to delete
+     * @return this instance for method chaining
+     */
+    public PveFirewallRuleUpdateOptions delete(String delete) { this.delete = delete; return this; }
 
     /**
      * Sets the digest to prevent concurrent modifications.
@@ -204,29 +186,14 @@ public class PveFirewallRuleCreateOptions implements ParamsConvertible {
      * @param digest the configuration digest
      * @return this instance for method chaining
      */
-    public PveFirewallRuleCreateOptions digest(String digest) {
-        this.digest = digest;
-        return this;
-    }
-
-    /**
-     * Sets the rule position.
-     *
-     * @param pos position in the rule list (0-based)
-     * @return this instance for method chaining
-     */
-    public PveFirewallRuleCreateOptions pos(Integer pos) {
-        this.pos = pos;
-        return this;
-    }
+    public PveFirewallRuleUpdateOptions digest(String digest) { this.digest = digest; return this; }
 
     /**
      * Builds and returns the options instance.
      *
      * @return this instance
      */
-    public PveFirewallRuleCreateOptions build() {
+    public PveFirewallRuleUpdateOptions build() {
         return this;
     }
 }
-

@@ -76,10 +76,11 @@ public class PveFirewallRules {
      * Updates a firewall rule.
      *
      * @param pos     the rule position
-     * @param options the updated options
+     * @param options the updated options (supports {@code moveto}, {@code delete}, {@code digest})
      * @return a request that completes when the rule is updated
+     * @throws IllegalArgumentException if options is null
      */
-    public ProxmoxRequest<Void> update(int pos, PveFirewallRuleCreateOptions options) {
+    public ProxmoxRequest<Void> update(int pos, PveFirewallRuleUpdateOptions options) {
         if (options == null) {
             throw new IllegalArgumentException("options cannot be null");
         }
@@ -98,9 +99,23 @@ public class PveFirewallRules {
      * @return a request that completes when the rule is deleted
      */
     public ProxmoxRequest<Void> delete(int pos) {
+        return delete(pos, null);
+    }
+
+    /**
+     * Deletes a firewall rule, optionally guarding against concurrent modifications.
+     *
+     * @param pos    the rule position
+     * @param digest optional configuration digest for conflict detection, or null
+     * @return a request that completes when the rule is deleted
+     */
+    public ProxmoxRequest<Void> delete(int pos, String digest) {
         return new ProxmoxRequest<>(() -> {
-            client.delete("nodes/" + nodeName + "/qemu/" + vmid + "/firewall/rules/" + pos)
-                .execute();
+            var request = client.delete("nodes/" + nodeName + "/qemu/" + vmid + "/firewall/rules/" + pos);
+            if (digest != null && !digest.isBlank()) {
+                request.param("digest", digest);
+            }
+            request.execute();
             return null;
         });
     }

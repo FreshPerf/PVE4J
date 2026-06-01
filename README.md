@@ -39,7 +39,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
 - **Configurable Security** - Easily manage SSL/TLS certificate and hostname verification for different environments
 - **Detailed VM Management** - Create, clone, delete, resize disks, and update configurations for QEMU VMs with type-safe builder options
 - **Backup Lifecycle** - Create backups (vzdump), restore VMs and containers from archives, manage backup files (notes, protection, deletion), apply retention/pruning, and drive scheduled cluster backup jobs
-- **Firewall Management** - Configure firewall options, rules, and IP Sets for QEMU VMs
+- **Firewall Management** - Configure firewall options, rules, aliases, IP Sets, log and references for QEMU VMs
 - **Storage Management** - Query storage status, list content, manage backup volumes, and retrieve statistics
 
 ## Current Implementation Status
@@ -70,8 +70,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - **Convert to template**
   - **Cloud-init helpers**
   - **Guest agent operations**
-  - Firewall options and IP Set management
-  - **Firewall rules management** (list, create, update, delete rules)
+  - **Firewall management** - options, rules (with rule moving), aliases, IP Sets, log, and references
   - **Snapshot management** (list, create, delete, rollback, update description)
 
 - **LXC Container Management**
@@ -303,8 +302,10 @@ The library's functionality is structured hierarchically, starting from the main
         - `.migrate(targetNode, online, targetStorage)` - Migrate to another node
         - `.template()` - Convert to template
         - `.getCloudInit()`, `.getAgent()`, `.getVnc()`, `.getRrdData()`
-        - `.getFirewall()` - Manage VM firewall settings
+        - `.getFirewall()` - Manage VM firewall settings (options, log, refs)
           - `.getRules()` - Manage firewall rules
+          - `.getAliases()` - Manage firewall aliases
+          - `.getIpSet()` - Manage firewall IP sets
         - `.getSnapshots()` - Manage VM snapshots
     - `.getLxc()` - Manage LXC containers on the node
       - `.create(vmid, options)` - Create a new container
