@@ -64,5 +64,37 @@ public record PveLxc(ProxmoxHttpClient client, String nodeName) {
                 .execute(PveTask.class)
         );
     }
+
+    /**
+     * Restores an LXC container from a backup archive.
+     *
+     * <p>This wraps {@code POST /nodes/{node}/lxc} in its restore mode (driven by the
+     * {@code restore} flag, with the backup archive passed as {@code ostemplate}). Use
+     * {@link PveLxcRestoreOptions#force(Boolean)} to overwrite an existing container with the
+     * same VMID.</p>
+     *
+     * @param vmid    the target container ID (must be &gt;= 100)
+     * @param options the restore options; {@link PveLxcRestoreOptions#archive(String)} is required
+     * @return a request returning the task for tracking
+     * @throws IllegalArgumentException if vmid is less than 100, options is null, or no archive is set
+     */
+    public ProxmoxRequest<PveTask> restore(int vmid, PveLxcRestoreOptions options) {
+        if (vmid < 100) {
+            throw new IllegalArgumentException("VMID must be >= 100");
+        }
+        if (options == null) {
+            throw new IllegalArgumentException("options cannot be null");
+        }
+        if (options.getArchive() == null || options.getArchive().isBlank()) {
+            throw new IllegalArgumentException("a backup archive must be set via options.archive(...)");
+        }
+
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/lxc")
+                .params(options.toParams(vmid))
+                .transformer(new TaskResponseTransformer())
+                .execute(PveTask.class)
+        );
+    }
 }
 

@@ -38,7 +38,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
 - **Type-Safe Entities** - Maps Proxmox API responses to strongly-typed Java objects
 - **Configurable Security** - Easily manage SSL/TLS certificate and hostname verification for different environments
 - **Detailed VM Management** - Create, clone, delete, resize disks, and update configurations for QEMU VMs with type-safe builder options
-- **Backup Lifecycle** - Create backups (vzdump), restore VMs from archives, manage backup files (notes, protection, deletion), apply retention/pruning, and drive scheduled cluster backup jobs
+- **Backup Lifecycle** - Create backups (vzdump), restore VMs and containers from archives, manage backup files (notes, protection, deletion), apply retention/pruning, and drive scheduled cluster backup jobs
 - **Firewall Management** - Configure firewall options, rules, and IP Sets for QEMU VMs
 - **Storage Management** - Query storage status, list content, manage backup volumes, and retrieve statistics
 
@@ -81,6 +81,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - Container configuration retrieval and updates
   - Pending changes, interfaces, and feature checks
   - Clone, migrate, and convert to template
+  - **Restore from a backup archive**
   - Snapshot management
   - Container deletion
 
@@ -93,7 +94,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
 - **Backup Management**
   - Node-level `vzdump` backups (single VM, list of VMIDs, pool, or all guests)
   - Read configured backup defaults and extract a guest config from an archive
-  - Restore a QEMU VM from a backup archive
+  - Restore a QEMU VM or LXC container from a backup archive
   - Backup file management and retention/pruning on storage
   - Cluster-wide scheduled backup jobs
 
@@ -287,7 +288,7 @@ The library's functionality is structured hierarchically, starting from the main
     - `.setResourceState()` - Change HA resource state
   - `.getBackup()` - Manage scheduled backup jobs
     - `.getJobs()`, `.getJob(id)`, `.createJob()`, `.updateJob()`, `.deleteJob()`
-    - `.getIncludedVolumes(id)`, `.getGuestsNotBackedUp()`
+    - `.getIncludedVolumes(id)`, `.getGuestsNotBackedUp()`, `.getBackupInfo()`
 - `proxmox.getNodes()` - List all nodes in the cluster
   - `.get("node-name")` - Access a specific node by its name
     - `.getQemu()` - Manage QEMU VMs on the node
@@ -307,6 +308,7 @@ The library's functionality is structured hierarchically, starting from the main
         - `.getSnapshots()` - Manage VM snapshots
     - `.getLxc()` - Manage LXC containers on the node
       - `.create(vmid, options)` - Create a new container
+      - `.restore(vmid, options)` - Restore a container from a backup archive
       - `.get(vmid)` - Access a specific container
         - `.updateConfig()`, `.getConfig()`, `.getStatus()`, `.getPending()`
         - `.getInterfaces()`, `.getFeature()`

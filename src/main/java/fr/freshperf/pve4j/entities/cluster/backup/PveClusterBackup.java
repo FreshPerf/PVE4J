@@ -6,6 +6,7 @@ import fr.freshperf.pve4j.request.ProxmoxHttpClient;
 import fr.freshperf.pve4j.request.ProxmoxRequest;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Facade for the cluster-wide vzdump backup job endpoints
@@ -119,6 +120,25 @@ public record PveClusterBackup(ProxmoxHttpClient httpClient) {
             httpClient.get("cluster/backup-info/not-backed-up")
                 .executeList(new TypeToken<List<PveBackupGuest>>(){})
         );
+    }
+
+    /**
+     * Returns the directory index of the {@code /cluster/backup-info} endpoint, i.e. the names
+     * of the available backup-info sub-resources (currently {@code not-backed-up}).
+     *
+     * <p>This is a navigational endpoint; for the actual data use
+     * {@link #getGuestsNotBackedUp()}.</p>
+     *
+     * @return a request returning the list of sub-directory names
+     */
+    public ProxmoxRequest<List<String>> getBackupInfo() {
+        return new ProxmoxRequest<>(() -> {
+            List<Map<String, Object>> subdirs = httpClient.get("cluster/backup-info")
+                .executeList(new TypeToken<List<Map<String, Object>>>(){});
+            return subdirs.stream()
+                .map(entry -> String.valueOf(entry.get("subdir")))
+                .toList();
+        });
     }
 
     private static void requireId(String id) {
