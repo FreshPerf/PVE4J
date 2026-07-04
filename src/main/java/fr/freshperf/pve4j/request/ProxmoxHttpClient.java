@@ -365,17 +365,19 @@ public class ProxmoxHttpClient {
      * Executes a request and deserializes the response to the given class.
      */
     <T> T execute(RequestBuilder builder, Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
-        return executeRequest(builder, clazz);
+        // For a plain class, extractElementClass falls back to the raw type and
+        // Gson treats the Class as its Type, so this path subsumes the Class case.
+        return executeRequest(builder, TypeToken.get(clazz));
     }
 
     /**
      * Executes a request and deserializes the response to a parameterized type.
      */
     <T> T executeList(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
-        return executeRequestWithType(builder, typeToken);
+        return executeRequest(builder, typeToken);
     }
-    
-    private <T> T executeRequest(RequestBuilder builder, Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
+
+    private <T> T executeRequest(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
         String url = buildUrl(builder.path, builder.params);
         Duration timeout = requestTimeout;
 
@@ -408,78 +410,7 @@ public class ProxmoxHttpClient {
             if (response.statusCode() >= 400) {
                 throw new ProxmoxAPIError(
                     "HTTP request failed",
-                    response.statusCode(),
-                    response.body(),
-                    url
-                );
-            }
-            
-            JsonElement parsedResponse;
-            try {
-                parsedResponse = JsonParser.parseString(response.body());
-            } catch (JsonSyntaxException e) {
-                throw new ProxmoxAPIError(
-                    "Failed to parse JSON response: " + e.getMessage(),
-                    response.statusCode(),
-                    response.body(),
-                    url
-                );
-            }
-            JsonElement dataElement = extractDataFromResponse(parsedResponse);
-            
-            ResponseTransformer transformer = builder.transformer != null ? builder.transformer : defaultTransformer;
-            JsonElement transformed = transformer.transform(dataElement, clazz);
-            
-            return gson.fromJson(transformed, clazz);
-
-        } catch (HttpConnectTimeoutException e) {
-            throw new ProxmoxAPIError("HTTP connection timed out: " + url, e);
-        } catch (HttpTimeoutException e) {
-            throw new ProxmoxAPIError("HTTP request timed out after " + timeout + ": " + url, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw e;
-        } catch (Exception e) {
-            if (e instanceof ProxmoxAPIError) {
-                throw (ProxmoxAPIError) e;
-            }
-            throw new ProxmoxAPIError("Network error: " + e.getMessage(), e);
-        }
-    }
-    
-    private <T> T executeRequestWithType(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
-        String url = buildUrl(builder.path, builder.params);
-        Duration timeout = requestTimeout;
-
-        try {
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .timeout(timeout)
-                    .header("Content-Type", "application/json");
-            
-            if (apiToken != null) {
-                requestBuilder.header("Authorization", "PVEAPIToken=" + apiToken);
-            } else if (ticket != null) {
-                requestBuilder.header("Cookie", "PVEAuthCookie=" + ticket);
-                if (csrfToken != null && (builder.method.equals("POST") || builder.method.equals("PUT") || 
-                    builder.method.equals("PATCH") || builder.method.equals("DELETE"))) {
-                    requestBuilder.header("CSRFPreventionToken", csrfToken);
-                }
-            }
-
-            switch (builder.method) {
-                case "GET" -> requestBuilder.GET();
-                case "POST" -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
-                case "PUT" -> requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
-                case "PATCH" -> requestBuilder.method("PATCH", HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
-                case "DELETE" -> requestBuilder.DELETE();
-            }
-
-            HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-            
-            if (response.statusCode() >= 400) {
-                throw new ProxmoxAPIError(
-                    "HTTP request failed",
+                    builder.method,
                     response.statusCode(),
                     response.body(),
                     url

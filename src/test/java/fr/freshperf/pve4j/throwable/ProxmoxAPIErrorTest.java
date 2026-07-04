@@ -128,6 +128,26 @@ class ProxmoxAPIErrorTest {
     }
 
     @Test
+    @DisplayName("Should carry the HTTP method when provided")
+    void shouldCarryHttpMethodWhenProvided() {
+        ProxmoxAPIError error = new ProxmoxAPIError("Error", "POST", 502, "Bad gateway", "http://test.com");
+
+        assertThat(error.getHttpMethod()).isEqualTo("POST");
+        assertThat(error.getStatusCode()).isEqualTo(502);
+        assertThat(error.getResponseBody()).isEqualTo("Bad gateway");
+        assertThat(error.getUrl()).isEqualTo("http://test.com");
+        assertThat(error.getMessage()).contains("Error");
+    }
+
+    @Test
+    @DisplayName("Should have null HTTP method on constructors without one")
+    void shouldHaveNullHttpMethodByDefault() {
+        assertThat(new ProxmoxAPIError("msg").getHttpMethod()).isNull();
+        assertThat(new ProxmoxAPIError("msg", 500, "body", "http://test.com").getHttpMethod()).isNull();
+        assertThat(new ProxmoxAPIError("msg", 500, "body", "http://test.com", new Exception()).getHttpMethod()).isNull();
+    }
+
+    @Test
     @DisplayName("Should create error with throwable constructor")
     void shouldCreateErrorWithThrowableConstructor() {
         Exception cause = new Exception("Root cause");

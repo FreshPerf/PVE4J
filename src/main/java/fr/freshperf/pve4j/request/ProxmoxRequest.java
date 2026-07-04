@@ -53,6 +53,7 @@ public class ProxmoxRequest<T> {
 
     private final ProxmoxRequestExecutor<T> requestExecutor;
     private int retryCount = 0;
+    private boolean retryOnAllMethods = false;
     private Duration retryDelay = Duration.ofSeconds(1);
     private Duration taskCheckDelay = Duration.ofSeconds(1);
     private Duration taskTimeout = DEFAULT_TASK_TIMEOUT;
@@ -107,11 +108,34 @@ public class ProxmoxRequest<T> {
      * request and returned a task, the request is never re-executed, even if waiting
      * for the task fails afterwards.</p>
      *
+     * <p>By default, only side-effect-free requests (GET, HEAD, OPTIONS) are retried,
+     * on transient errors (HTTP 429 or 5xx). Any other request — POST, PUT, PATCH,
+     * DELETE, or an error that does not carry an HTTP method — may already have been
+     * accepted by Proxmox before the error response was produced, so it is never
+     * retried unless {@link #retryOnAllMethods()} is set.</p>
+     *
      * @param attempts the number of retry attempts (must be >= 0)
      * @return this instance for method chaining
      */
     public ProxmoxRequest<T> retry(int attempts) {
         this.retryCount = Math.max(0, attempts);
+        return this;
+    }
+
+    /**
+     * Opts in to retrying regardless of the HTTP method of the failed request.
+     *
+     * <p>Use only when re-executing the operation is known to be harmless. A request
+     * with side effects that failed with a 5xx may already have been applied by
+     * Proxmox before the response was lost; retrying it then duplicates the effect:
+     * a POST clone or backup starts a second task, a PUT resize with a relative size
+     * ({@code +1G}) grows the disk again, a DELETE reports an already-completed
+     * deletion as an error and turns a success into a spurious failure.</p>
+     *
+     * @return this instance for method chaining
+     */
+    public ProxmoxRequest<T> retryOnAllMethods() {
+        this.retryOnAllMethods = true;
         return this;
     }
     
@@ -451,7 +475,21 @@ public class ProxmoxRequest<T> {
     
     private boolean shouldRetry(ProxmoxAPIError e) {
         int statusCode = e.getStatusCode();
-        return statusCode == 429 || statusCode == 503 || statusCode >= 500;
+        boolean transientError = statusCode == 429 || statusCode >= 500;
+        return transientError && (retryOnAllMethods || isSafeToRetry(e.getHttpMethod()));
+    }
+
+    /**
+     * Only side-effect-free methods are safe to re-execute automatically. PUT and
+     * DELETE, although idempotent in HTTP terms, are excluded: Proxmox uses PUT for
+     * operations like disk resize with relative sizes ({@code +1G}), where a retry
+     * after a lost response duplicates the effect, and reports an already-completed
+     * DELETE as an error, turning a success into a spurious failure.
+     */
+    private static boolean isSafeToRetry(String httpMethod) {
+        return "GET".equals(httpMethod)
+            || "HEAD".equals(httpMethod)
+            || "OPTIONS".equals(httpMethod);
     }
 }
 
