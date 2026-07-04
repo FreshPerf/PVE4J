@@ -436,6 +436,9 @@ public class ProxmoxHttpClient {
             throw new ProxmoxAPIError("HTTP connection timed out: " + url, e);
         } catch (HttpTimeoutException e) {
             throw new ProxmoxAPIError("HTTP request timed out after " + timeout + ": " + url, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
         } catch (Exception e) {
             if (e instanceof ProxmoxAPIError) {
                 throw (ProxmoxAPIError) e;
@@ -507,6 +510,9 @@ public class ProxmoxHttpClient {
             throw new ProxmoxAPIError("HTTP connection timed out: " + url, e);
         } catch (HttpTimeoutException e) {
             throw new ProxmoxAPIError("HTTP request timed out after " + timeout + ": " + url, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
         } catch (Exception e) {
             if (e instanceof ProxmoxAPIError) {
                 throw (ProxmoxAPIError) e;

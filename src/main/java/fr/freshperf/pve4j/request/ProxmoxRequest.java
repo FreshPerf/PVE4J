@@ -350,7 +350,11 @@ public class ProxmoxRequest<T> {
             CompletableFuture<PveTaskStatus> future = defaultAsyncTaskManager.waitForTaskAsync(
                 proxmox, task, checkDelay, timeout
             );
-            status = future.join();
+            // get() (unlike join()) lets the waiting thread respond to interruption.
+            status = future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
         } catch (Exception e) {
             Throwable cause = e.getCause();
             if (cause instanceof ProxmoxAPIError) {
