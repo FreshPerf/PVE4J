@@ -21,6 +21,12 @@ import java.util.concurrent.*;
  */
 public class ProxmoxAsyncTaskManager {
 
+    /**
+     * Maximum number of consecutive status-check failures tolerated before polling
+     * gives up. Status checks are idempotent GETs, so retrying them is always safe.
+     */
+    private static final int MAX_CONSECUTIVE_POLL_FAILURES = 3;
+
     private final ProxmoxThreadManager threadManager;
     private final ScheduledExecutorService scheduler;
 
@@ -119,9 +125,14 @@ public class ProxmoxAsyncTaskManager {
      * <p>The deadline is checked inside the loop itself so that polling actually
      * stops on timeout — cancelling the enclosing future would not interrupt the
      * thread running this loop.</p>
+     *
+     * <p>A transient status-check failure does not abort a potentially long wait:
+     * the check is retried at the next interval, and polling only gives up after
+     * {@link #MAX_CONSECUTIVE_POLL_FAILURES} consecutive failures.</p>
      */
     private PveTaskStatus pollTaskStatus(Proxmox proxmox, PveTask task, Duration checkInterval, Duration timeout) {
         Instant deadline = timeout != null ? Instant.now().plus(timeout) : null;
+        int consecutiveFailures = 0;
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 if (deadline != null && !Instant.now().isBefore(deadline)) {
@@ -130,10 +141,18 @@ public class ProxmoxAsyncTaskManager {
                     );
                 }
 
-                PveTaskStatus status = proxmox.getTaskStatus(task).execute();
+                try {
+                    PveTaskStatus status = proxmox.getTaskStatus(task).execute();
+                    consecutiveFailures = 0;
 
-                if (status.isCompleted()) {
-                    return status;
+                    if (status.isCompleted()) {
+                        return status;
+                    }
+                } catch (ProxmoxAPIError e) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+                        throw new CompletionException("Task status polling failed", e);
+                    }
                 }
 
                 long sleepMillis = checkInterval.toMillis();
@@ -147,8 +166,6 @@ public class ProxmoxAsyncTaskManager {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new CompletionException("Task polling interrupted", e);
-        } catch (ProxmoxAPIError e) {
-            throw new CompletionException("Task status polling failed", e);
         }
     }
 

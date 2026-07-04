@@ -103,6 +103,10 @@ public class ProxmoxRequest<T> {
     /**
      * Configures the number of retry attempts for failed requests.
      *
+     * <p>Retries apply to the initial API call only: once Proxmox has accepted the
+     * request and returned a task, the request is never re-executed, even if waiting
+     * for the task fails afterwards.</p>
+     *
      * @param attempts the number of retry attempts (must be >= 0)
      * @return this instance for method chaining
      */
@@ -253,6 +257,11 @@ public class ProxmoxRequest<T> {
     /**
      * Executes the request with configured retry, timeout, and task monitoring settings.
      *
+     * <p>The retry policy applies to the initial API call only. Once Proxmox has accepted
+     * the request and returned a task, the request is never re-executed: a failure while
+     * waiting for the task is reported as a task-monitoring error (status code -1, original
+     * error as cause), not retried — the task may still be running server-side.</p>
+     *
      * <p>If a Proxmox task is returned and {@link #waitForCompletion(Proxmox)} was called,
      * this method blocks until the task completes or times out.</p>
      *
@@ -264,46 +273,54 @@ public class ProxmoxRequest<T> {
      * @throws InterruptedException if the thread is interrupted
      */
     public T execute() throws ProxmoxAPIError, InterruptedException {
+        T result = executeWithRetry();
+
+        PveTask task = extractTaskFromResponse(result);
+
+        if (task != null && hasValidUpid(task)) {
+            if (proxmoxForWait != null) {
+                waitForTaskCompletion(proxmoxForWait, task, taskCheckDelay, taskTimeout);
+            } else if (taskCompletionCallback != null && proxmoxForCallback != null) {
+                defaultAsyncTaskManager.waitForTaskWithCallback(
+                    proxmoxForCallback,
+                    task,
+                    taskCheckDelay,
+                    taskTimeout,
+                    taskCompletionCallback
+                );
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Runs the underlying API call with the configured retry policy.
+     *
+     * <p>Only this initial call is ever retried. Task waiting happens outside this loop
+     * so that a polling failure can never re-execute the original (potentially
+     * non-idempotent) request.</p>
+     */
+    private T executeWithRetry() throws ProxmoxAPIError, InterruptedException {
         int attempts = 0;
         int maxAttempts = retryCount + 1;
         ProxmoxAPIError lastException = null;
-        
+
         while (attempts < maxAttempts) {
             try {
-                T result = requestExecutor.execute();
-                
-                PveTask task = extractTaskFromResponse(result);
-                
-                if (task != null && hasValidUpid(task)) {
-                    if (proxmoxForWait != null) {
-                        waitForTaskCompletion(proxmoxForWait, task, taskCheckDelay, taskTimeout);
-                        return result;
-                    }
-                    
-                    if (taskCompletionCallback != null && proxmoxForCallback != null) {
-                        defaultAsyncTaskManager.waitForTaskWithCallback(
-                            proxmoxForCallback,
-                            task,
-                            taskCheckDelay,
-                            taskTimeout,
-                            taskCompletionCallback
-                        );
-                    }
-                }
-                
-                return result;
+                return requestExecutor.execute();
             } catch (ProxmoxAPIError e) {
                 lastException = e;
                 attempts++;
-                
+
                 if (attempts >= maxAttempts) {
                     break;
                 }
-                
+
                 if (!shouldRetry(e)) {
                     throw e;
                 }
-                
+
                 try {
                     Thread.sleep(retryDelay.toMillis());
                 } catch (InterruptedException ie) {
@@ -312,14 +329,19 @@ public class ProxmoxRequest<T> {
                 }
             }
         }
-        
-        throw lastException != null ? lastException 
+
+        throw lastException != null ? lastException
             : new ProxmoxAPIError("Request failed after " + maxAttempts + " attempts");
     }
     
     /**
      * Waits for task completion internally (blocking).
      * Throws a {@link ProxmoxAPIError} if the task finished unsuccessfully.
+     *
+     * <p>Polling errors are wrapped in a {@link ProxmoxAPIError} without an HTTP status
+     * code (-1), with the underlying error as cause: they describe a failure to observe
+     * the task, not a failure of the request that created it — the task may still be
+     * running. They must therefore never be treated as retryable request errors.</p>
      */
     private static void waitForTaskCompletion(Proxmox proxmox, PveTask task, Duration checkDelay, Duration timeout)
             throws ProxmoxAPIError, InterruptedException {
@@ -332,13 +354,15 @@ public class ProxmoxRequest<T> {
         } catch (Exception e) {
             Throwable cause = e.getCause();
             if (cause instanceof ProxmoxAPIError) {
-                throw (ProxmoxAPIError) cause;
+                throw new ProxmoxAPIError(
+                    "Task status polling failed for " + task.getUpid()
+                        + "; the task may still be running", cause);
             } else if (cause instanceof InterruptedException) {
                 throw (InterruptedException) cause;
             } else if (cause instanceof TimeoutException) {
                 throw new ProxmoxAPIError("Task timeout exceeded: " + timeout);
             } else {
-                throw new ProxmoxAPIError("Failed to wait for task completion: " + e.getMessage());
+                throw new ProxmoxAPIError("Failed to wait for task completion: " + e.getMessage(), e);
             }
         }
         if (status != null && !status.isSuccessful()) {
