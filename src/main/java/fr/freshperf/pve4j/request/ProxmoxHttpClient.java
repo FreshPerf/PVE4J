@@ -10,18 +10,24 @@ import fr.freshperf.pve4j.SecurityConfig;
 import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.Socket;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.HashMap;
@@ -114,50 +120,15 @@ public class ProxmoxHttpClient {
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10));
 
-        boolean needsCustomSsl = !securityConfig.shouldVerifySslCertificate();
-        boolean needsHostnameDisabled = !securityConfig.shouldVerifyHostname();
+        boolean verifyCertificate = securityConfig.shouldVerifySslCertificate();
+        boolean verifyHostname = securityConfig.shouldVerifyHostname();
 
-        if (needsCustomSsl || needsHostnameDisabled) {
+        if (!verifyCertificate || !verifyHostname) {
             try {
-                SSLContext sslContext;
-                
-                if (needsCustomSsl) {
-                    TrustManager[] trustAllCerts = new TrustManager[]{
-                        new X509TrustManager() {
-                            @Override
-                            public X509Certificate[] getAcceptedIssuers() {
-                                return new X509Certificate[0];
-                            }
-
-                            @Override
-                            public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                            }
-
-                            @Override
-                            public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                            }
-                        }
-                    };
-                    sslContext = SSLContext.getInstance("TLS");
-                    sslContext.init(null, trustAllCerts, new SecureRandom());
-                } else {
-                    sslContext = SSLContext.getDefault();
-                }
-                
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, selectTrustManagers(verifyCertificate, verifyHostname), new SecureRandom());
                 clientBuilder.sslContext(sslContext);
-
-                if (needsHostnameDisabled) {
-                    System.setProperty(
-                            "jdk.internal.httpclient.disableHostnameVerification",
-                            "true"
-                    );
-                    
-                    SSLParameters sslParameters = new SSLParameters();
-                    sslParameters.setEndpointIdentificationAlgorithm(null);
-                    clientBuilder.sslParameters(sslParameters);
-                }
-
-            } catch (Exception e) {
+            } catch (GeneralSecurityException e) {
                 throw new RuntimeException("Failed to create SSL context", e);
             }
         }
@@ -165,6 +136,134 @@ public class ProxmoxHttpClient {
         this.client = clientBuilder.build();
         this.gson = new Gson();
         this.defaultTransformer = new ProxmoxResponseTransformer();
+    }
+
+    /*
+     * java.net.http.HttpClient always enables endpoint identification ("HTTPS") on its
+     * connections and overrides any SSLParameters that try to unset it; the only other
+     * escape hatch, the jdk.internal.httpclient.disableHostnameVerification system
+     * property, is read once per JVM and affects every HttpClient in the process.
+     * The identity check itself is performed by the trust manager, which is per-client
+     * state, so hostname verification is controlled here:
+     *  - a plain X509TrustManager is wrapped by JSSE in a wrapper that enforces the
+     *    hostname check on top of whatever the delegate accepts;
+     *  - an X509ExtendedTrustManager is used as-is and is solely responsible for both
+     *    chain validation and endpoint identification;
+     *  - the default trust manager's channel-less checkServerTrusted(chain, authType)
+     *    validates the chain but never checks endpoint identity.
+     */
+    private static TrustManager[] selectTrustManagers(boolean verifyCertificate, boolean verifyHostname)
+            throws GeneralSecurityException {
+        if (!verifyCertificate && verifyHostname) {
+            // Plain (non-extended) trust-all manager: JSSE's wrapper still performs the
+            // hostname check against the presented certificate.
+            return new TrustManager[]{
+                new X509TrustManager() {
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+                }
+            };
+        }
+
+        if (!verifyCertificate) {
+            // Extended trust-all manager: neither the chain nor the hostname is verified,
+            // for this client only.
+            return new TrustManager[]{
+                new X509ExtendedTrustManager() {
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType, Socket socket) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType, Socket socket) {
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType, SSLEngine engine) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType, SSLEngine engine) {
+                    }
+                }
+            };
+        }
+
+        // Certificate verified, hostname not: delegate chain validation to the platform
+        // default trust manager through its channel-less methods.
+        X509TrustManager defaultTm = defaultTrustManager();
+        return new TrustManager[]{
+            new X509ExtendedTrustManager() {
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+                    return defaultTm.getAcceptedIssuers();
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] certs, String authType) throws CertificateException {
+                    defaultTm.checkClientTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] certs, String authType) throws CertificateException {
+                    defaultTm.checkServerTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] certs, String authType, Socket socket) throws CertificateException {
+                    defaultTm.checkClientTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] certs, String authType, Socket socket) throws CertificateException {
+                    defaultTm.checkServerTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] certs, String authType, SSLEngine engine) throws CertificateException {
+                    defaultTm.checkClientTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] certs, String authType, SSLEngine engine) throws CertificateException {
+                    defaultTm.checkServerTrusted(certs, authType);
+                }
+            }
+        };
+    }
+
+    private static X509TrustManager defaultTrustManager() throws GeneralSecurityException {
+        TrustManagerFactory factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        factory.init((KeyStore) null);
+        for (TrustManager trustManager : factory.getTrustManagers()) {
+            if (trustManager instanceof X509TrustManager x509TrustManager) {
+                return x509TrustManager;
+            }
+        }
+        throw new GeneralSecurityException("No X509TrustManager available from the default TrustManagerFactory");
     }
 
     /**
