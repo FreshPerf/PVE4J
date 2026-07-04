@@ -21,8 +21,10 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -40,6 +42,8 @@ import java.util.stream.Collectors;
  */
 public class ProxmoxHttpClient {
 
+    private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(30);
+
     private final String apiToken;
     private final String ticket;
     private final String csrfToken;
@@ -47,6 +51,7 @@ public class ProxmoxHttpClient {
     private final String baseUrl;
     private Gson gson;
     private ProxmoxResponseTransformer defaultTransformer;
+    private volatile Duration requestTimeout = DEFAULT_REQUEST_TIMEOUT;
 
     /**
      * Returns the base URL for API requests.
@@ -64,6 +69,30 @@ public class ProxmoxHttpClient {
      */
     public String getTicket() {
         return ticket;
+    }
+
+    /**
+     * Returns the per-request response timeout.
+     *
+     * @return the request timeout (default: 30 seconds)
+     */
+    public Duration getRequestTimeout() {
+        return requestTimeout;
+    }
+
+    /**
+     * Sets the per-request response timeout. If the server does not answer within
+     * this duration, the request fails with a {@link ProxmoxAPIError} instead of
+     * blocking indefinitely.
+     *
+     * @param requestTimeout the maximum time to wait for a response (must be positive)
+     * @throws IllegalArgumentException if the timeout is null, zero or negative
+     */
+    public void setRequestTimeout(Duration requestTimeout) {
+        if (requestTimeout == null || requestTimeout.isZero() || requestTimeout.isNegative()) {
+            throw new IllegalArgumentException("Request timeout must be positive");
+        }
+        this.requestTimeout = requestTimeout;
     }
 
     /**
@@ -348,10 +377,12 @@ public class ProxmoxHttpClient {
     
     private <T> T executeRequest(RequestBuilder builder, Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
         String url = buildUrl(builder.path, builder.params);
-        
+        Duration timeout = requestTimeout;
+
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(timeout)
                     .header("Content-Type", "application/json");
             
             if (apiToken != null) {
@@ -400,7 +431,11 @@ public class ProxmoxHttpClient {
             JsonElement transformed = transformer.transform(dataElement, clazz);
             
             return gson.fromJson(transformed, clazz);
-            
+
+        } catch (HttpConnectTimeoutException e) {
+            throw new ProxmoxAPIError("HTTP connection timed out: " + url, e);
+        } catch (HttpTimeoutException e) {
+            throw new ProxmoxAPIError("HTTP request timed out after " + timeout + ": " + url, e);
         } catch (Exception e) {
             if (e instanceof ProxmoxAPIError) {
                 throw (ProxmoxAPIError) e;
@@ -411,10 +446,12 @@ public class ProxmoxHttpClient {
     
     private <T> T executeRequestWithType(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
         String url = buildUrl(builder.path, builder.params);
-        
+        Duration timeout = requestTimeout;
+
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(timeout)
                     .header("Content-Type", "application/json");
             
             if (apiToken != null) {
@@ -465,7 +502,11 @@ public class ProxmoxHttpClient {
             JsonElement transformed = transformer.transform(dataElement, elementClass);
             
             return gson.fromJson(transformed, typeToken.getType());
-            
+
+        } catch (HttpConnectTimeoutException e) {
+            throw new ProxmoxAPIError("HTTP connection timed out: " + url, e);
+        } catch (HttpTimeoutException e) {
+            throw new ProxmoxAPIError("HTTP request timed out after " + timeout + ": " + url, e);
         } catch (Exception e) {
             if (e instanceof ProxmoxAPIError) {
                 throw (ProxmoxAPIError) e;
