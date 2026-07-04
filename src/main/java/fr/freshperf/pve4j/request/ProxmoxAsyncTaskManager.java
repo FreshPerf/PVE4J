@@ -41,6 +41,10 @@ public class ProxmoxAsyncTaskManager {
     /**
      * Waits for task completion asynchronously.
      *
+     * <p>The returned future completes with the terminal status whether the task
+     * succeeded or failed — check {@link PveTaskStatus#isSuccessful()}. It only
+     * completes exceptionally on polling errors (network, interruption, timeout).</p>
+     *
      * @param proxmox the Proxmox instance to check status
      * @param task the task to monitor
      * @param checkInterval the interval between checks
@@ -72,6 +76,10 @@ public class ProxmoxAsyncTaskManager {
     /**
      * Waits for task completion with a callback.
      *
+     * <p>{@link TaskCompletionCallback#onComplete(PveTaskStatus)} is invoked for every
+     * terminal status, successful or not. {@link TaskCompletionCallback#onError(Throwable)}
+     * is invoked when polling itself fails (network error, timeout, interruption).</p>
+     *
      * @param proxmox the Proxmox instance to check status
      * @param task the task to monitor
      * @param checkInterval the interval between checks
@@ -87,19 +95,23 @@ public class ProxmoxAsyncTaskManager {
             TaskCompletionCallback callback) {
 
         return waitForTaskAsync(proxmox, task, checkInterval, timeout)
-            .thenAccept(status -> {
-                if (callback != null && status != null) {
+            .handle((status, throwable) -> {
+                if (callback == null) {
+                    return null;
+                }
+                if (throwable != null) {
+                    callback.onError(unwrap(throwable));
+                } else if (status != null) {
                     callback.onComplete(status);
                 }
-            })
-            .exceptionally(throwable -> {
-                System.err.println("Error in task completion callback: " + throwable.getMessage());
                 return null;
             });
     }
 
     /**
-     * Polls task status until completion.
+     * Polls task status until the task reaches a terminal state.
+     * Returns the terminal status whether the task succeeded or failed;
+     * only throws on polling errors (network, interruption).
      */
     private PveTaskStatus pollTaskStatus(Proxmox proxmox, PveTask task, Duration checkInterval) {
         try {
@@ -107,12 +119,6 @@ public class ProxmoxAsyncTaskManager {
                 PveTaskStatus status = proxmox.getTaskStatus(task).execute();
 
                 if (status.isCompleted()) {
-                    if (!status.isSuccessful()) {
-                        String errorMsg = status.getExitstatus() != null
-                            ? "Task failed with exit status: " + status.getExitstatus()
-                            : "Task completed with errors";
-                        throw new ProxmoxAPIError(errorMsg);
-                    }
                     return status;
                 }
 
@@ -123,8 +129,18 @@ public class ProxmoxAsyncTaskManager {
             Thread.currentThread().interrupt();
             throw new CompletionException("Task polling interrupted", e);
         } catch (ProxmoxAPIError e) {
-            throw new CompletionException("Task failed", e);
+            throw new CompletionException("Task status polling failed", e);
         }
+    }
+
+    /**
+     * Unwraps a CompletionException to its cause for callback delivery.
+     */
+    private static Throwable unwrap(Throwable throwable) {
+        if (throwable instanceof CompletionException && throwable.getCause() != null) {
+            return throwable.getCause();
+        }
+        return throwable;
     }
 
 

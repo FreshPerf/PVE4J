@@ -164,6 +164,11 @@ public class ProxmoxRequest<T> {
      * Configures a callback to be executed when the task completes (asynchronously).
      * The callback runs in a separate virtual thread and does not block the main execution.
      *
+     * <p>{@link TaskCompletionCallback#onComplete(PveTaskStatus)} is invoked for every
+     * terminal status — check {@link PveTaskStatus#isSuccessful()} to distinguish success
+     * from failure. {@link TaskCompletionCallback#onError(Throwable)} is invoked when the
+     * status could not be determined (network error while polling, timeout, interruption).</p>
+     *
      * @param callback the callback to execute on completion
      * @param proxmox the Proxmox instance to use for status checks
      * @return this instance for method chaining
@@ -229,26 +234,9 @@ public class ProxmoxRequest<T> {
         if (task == null || !hasValidUpid(task)) {
             return task;
         }
-        
-        try {
-            CompletableFuture<PveTaskStatus> future = defaultAsyncTaskManager.waitForTaskAsync(
-                proxmox, task, checkDelay, timeout
-            );
 
-            future.join();
-            return task;
-        } catch (Exception e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof ProxmoxAPIError) {
-                throw (ProxmoxAPIError) cause;
-            } else if (cause instanceof InterruptedException) {
-                throw (InterruptedException) cause;
-            } else if (cause instanceof TimeoutException) {
-                throw new ProxmoxAPIError("Task timeout exceeded: " + timeout);
-            } else {
-                throw new ProxmoxAPIError("Failed to wait for task completion: " + e.getMessage());
-            }
-        }
+        waitForTaskCompletion(proxmox, task, checkDelay, timeout);
+        return task;
     }
 
     /**
@@ -320,14 +308,16 @@ public class ProxmoxRequest<T> {
     
     /**
      * Waits for task completion internally (blocking).
+     * Throws a {@link ProxmoxAPIError} if the task finished unsuccessfully.
      */
     private static void waitForTaskCompletion(Proxmox proxmox, PveTask task, Duration checkDelay, Duration timeout)
             throws ProxmoxAPIError, InterruptedException {
+        PveTaskStatus status;
         try {
             CompletableFuture<PveTaskStatus> future = defaultAsyncTaskManager.waitForTaskAsync(
                 proxmox, task, checkDelay, timeout
             );
-            future.join();
+            status = future.join();
         } catch (Exception e) {
             Throwable cause = e.getCause();
             if (cause instanceof ProxmoxAPIError) {
@@ -339,6 +329,12 @@ public class ProxmoxRequest<T> {
             } else {
                 throw new ProxmoxAPIError("Failed to wait for task completion: " + e.getMessage());
             }
+        }
+        if (status != null && !status.isSuccessful()) {
+            String errorMsg = status.getExitstatus() != null
+                ? "Task failed with exit status: " + status.getExitstatus()
+                : "Task completed with errors";
+            throw new ProxmoxAPIError(errorMsg);
         }
     }
     
