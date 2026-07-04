@@ -6,6 +6,7 @@ import fr.freshperf.pve4j.entities.PveTaskStatus;
 import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.*;
 
 /**
@@ -62,11 +63,13 @@ public class ProxmoxAsyncTaskManager {
         }
 
         CompletableFuture<PveTaskStatus> future = CompletableFuture.supplyAsync(
-            () -> pollTaskStatus(proxmox, task, checkInterval),
+            () -> pollTaskStatus(proxmox, task, checkInterval, timeout),
             threadManager.getVirtualThreadExecutor()
         );
 
         if (timeout != null) {
+            // The polling loop enforces the deadline itself and stops; this only
+            // guarantees the caller's future completes punctually at the timeout.
             return addTimeout(future, timeout);
         }
 
@@ -109,20 +112,36 @@ public class ProxmoxAsyncTaskManager {
     }
 
     /**
-     * Polls task status until the task reaches a terminal state.
+     * Polls task status until the task reaches a terminal state or the timeout expires.
      * Returns the terminal status whether the task succeeded or failed;
-     * only throws on polling errors (network, interruption).
+     * only throws on polling errors (network, interruption, timeout).
+     *
+     * <p>The deadline is checked inside the loop itself so that polling actually
+     * stops on timeout — cancelling the enclosing future would not interrupt the
+     * thread running this loop.</p>
      */
-    private PveTaskStatus pollTaskStatus(Proxmox proxmox, PveTask task, Duration checkInterval) {
+    private PveTaskStatus pollTaskStatus(Proxmox proxmox, PveTask task, Duration checkInterval, Duration timeout) {
+        Instant deadline = timeout != null ? Instant.now().plus(timeout) : null;
         try {
             while (!Thread.currentThread().isInterrupted()) {
+                if (deadline != null && !Instant.now().isBefore(deadline)) {
+                    throw new CompletionException(
+                        new TimeoutException("Operation timed out after " + timeout)
+                    );
+                }
+
                 PveTaskStatus status = proxmox.getTaskStatus(task).execute();
 
                 if (status.isCompleted()) {
                     return status;
                 }
 
-                Thread.sleep(checkInterval.toMillis());
+                long sleepMillis = checkInterval.toMillis();
+                if (deadline != null) {
+                    long remainingMillis = Duration.between(Instant.now(), deadline).toMillis();
+                    sleepMillis = Math.min(sleepMillis, Math.max(1, remainingMillis));
+                }
+                Thread.sleep(sleepMillis);
             }
             throw new InterruptedException("Task polling was interrupted");
         } catch (InterruptedException e) {

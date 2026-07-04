@@ -35,7 +35,13 @@ import java.util.concurrent.TimeoutException;
  * @param <T> the return type of the request
  */
 public class ProxmoxRequest<T> {
-    
+
+    /**
+     * Default timeout applied to task completion waiting when none is configured.
+     * Prevents unbounded polling of tasks that never reach a terminal state.
+     */
+    public static final Duration DEFAULT_TASK_TIMEOUT = Duration.ofMinutes(30);
+
     private static ProxmoxThreadManager defaultThreadManager;
     private static ProxmoxAsyncTaskManager defaultAsyncTaskManager;
 
@@ -49,7 +55,7 @@ public class ProxmoxRequest<T> {
     private int retryCount = 0;
     private Duration retryDelay = Duration.ofSeconds(1);
     private Duration taskCheckDelay = Duration.ofSeconds(1);
-    private Duration taskTimeout = null; // No timeout by default
+    private Duration taskTimeout = DEFAULT_TASK_TIMEOUT;
     private TaskCompletionCallback taskCompletionCallback;
     private Proxmox proxmoxForCallback;
     private Proxmox proxmoxForWait;
@@ -152,7 +158,10 @@ public class ProxmoxRequest<T> {
     /**
      * Configures a timeout for task completion waiting.
      *
-     * @param timeout the maximum timeout duration
+     * <p>Defaults to {@link #DEFAULT_TASK_TIMEOUT} (30 minutes). Pass {@code null}
+     * to explicitly disable the timeout and wait indefinitely.</p>
+     *
+     * @param timeout the maximum timeout duration, or null for no timeout
      * @return this instance for method chaining
      */
     public ProxmoxRequest<T> taskTimeout(Duration timeout) {
@@ -192,30 +201,32 @@ public class ProxmoxRequest<T> {
     }
 
     /**
-     * Waits for task completion synchronously.
+     * Waits for task completion synchronously, with the default timeout
+     * ({@link #DEFAULT_TASK_TIMEOUT}).
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
      * @return the completed task
-     * @throws ProxmoxAPIError if the task fails
+     * @throws ProxmoxAPIError if the task fails or times out
      * @throws InterruptedException if the thread is interrupted
      */
     public static PveTask waitForCompletion(Proxmox proxmox, PveTask task) throws ProxmoxAPIError, InterruptedException {
-        return waitForCompletion(proxmox, task, Duration.ofSeconds(1), null);
+        return waitForCompletion(proxmox, task, Duration.ofSeconds(1), DEFAULT_TASK_TIMEOUT);
     }
 
     /**
-     * Waits for task completion synchronously with a custom check delay.
+     * Waits for task completion synchronously with a custom check delay, with the
+     * default timeout ({@link #DEFAULT_TASK_TIMEOUT}).
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
      * @param checkDelayMs the delay between status checks in milliseconds
      * @return the completed task
-     * @throws ProxmoxAPIError if the task fails
+     * @throws ProxmoxAPIError if the task fails or times out
      * @throws InterruptedException if the thread is interrupted
      */
     public static PveTask waitForCompletion(Proxmox proxmox, PveTask task, long checkDelayMs) throws ProxmoxAPIError, InterruptedException {
-        return waitForCompletion(proxmox, task, Duration.ofMillis(checkDelayMs), null);
+        return waitForCompletion(proxmox, task, Duration.ofMillis(checkDelayMs), DEFAULT_TASK_TIMEOUT);
     }
 
     /**
