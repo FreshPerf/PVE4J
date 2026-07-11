@@ -35,7 +35,13 @@ import java.util.concurrent.TimeoutException;
  * @param <T> the return type of the request
  */
 public class ProxmoxRequest<T> {
-    
+
+    /**
+     * Default timeout applied to task completion waiting when none is configured.
+     * Prevents unbounded polling of tasks that never reach a terminal state.
+     */
+    public static final Duration DEFAULT_TASK_TIMEOUT = Duration.ofMinutes(30);
+
     private static ProxmoxThreadManager defaultThreadManager;
     private static ProxmoxAsyncTaskManager defaultAsyncTaskManager;
 
@@ -47,9 +53,10 @@ public class ProxmoxRequest<T> {
 
     private final ProxmoxRequestExecutor<T> requestExecutor;
     private int retryCount = 0;
+    private boolean retryOnAllMethods = false;
     private Duration retryDelay = Duration.ofSeconds(1);
     private Duration taskCheckDelay = Duration.ofSeconds(1);
-    private Duration taskTimeout = null; // No timeout by default
+    private Duration taskTimeout = DEFAULT_TASK_TIMEOUT;
     private TaskCompletionCallback taskCompletionCallback;
     private Proxmox proxmoxForCallback;
     private Proxmox proxmoxForWait;
@@ -97,11 +104,38 @@ public class ProxmoxRequest<T> {
     /**
      * Configures the number of retry attempts for failed requests.
      *
+     * <p>Retries apply to the initial API call only: once Proxmox has accepted the
+     * request and returned a task, the request is never re-executed, even if waiting
+     * for the task fails afterwards.</p>
+     *
+     * <p>By default, only side-effect-free requests (GET, HEAD, OPTIONS) are retried,
+     * on transient errors (HTTP 429 or 5xx). Any other request — POST, PUT, PATCH,
+     * DELETE, or an error that does not carry an HTTP method — may already have been
+     * accepted by Proxmox before the error response was produced, so it is never
+     * retried unless {@link #retryOnAllMethods()} is set.</p>
+     *
      * @param attempts the number of retry attempts (must be >= 0)
      * @return this instance for method chaining
      */
     public ProxmoxRequest<T> retry(int attempts) {
         this.retryCount = Math.max(0, attempts);
+        return this;
+    }
+
+    /**
+     * Opts in to retrying regardless of the HTTP method of the failed request.
+     *
+     * <p>Use only when re-executing the operation is known to be harmless. A request
+     * with side effects that failed with a 5xx may already have been applied by
+     * Proxmox before the response was lost; retrying it then duplicates the effect:
+     * a POST clone or backup starts a second task, a PUT resize with a relative size
+     * ({@code +1G}) grows the disk again, a DELETE reports an already-completed
+     * deletion as an error and turns a success into a spurious failure.</p>
+     *
+     * @return this instance for method chaining
+     */
+    public ProxmoxRequest<T> retryOnAllMethods() {
+        this.retryOnAllMethods = true;
         return this;
     }
     
@@ -152,7 +186,10 @@ public class ProxmoxRequest<T> {
     /**
      * Configures a timeout for task completion waiting.
      *
-     * @param timeout the maximum timeout duration
+     * <p>Defaults to {@link #DEFAULT_TASK_TIMEOUT} (30 minutes). Pass {@code null}
+     * to explicitly disable the timeout and wait indefinitely.</p>
+     *
+     * @param timeout the maximum timeout duration, or null for no timeout
      * @return this instance for method chaining
      */
     public ProxmoxRequest<T> taskTimeout(Duration timeout) {
@@ -163,6 +200,11 @@ public class ProxmoxRequest<T> {
     /**
      * Configures a callback to be executed when the task completes (asynchronously).
      * The callback runs in a separate virtual thread and does not block the main execution.
+     *
+     * <p>{@link TaskCompletionCallback#onComplete(PveTaskStatus)} is invoked for every
+     * terminal status — check {@link PveTaskStatus#isSuccessful()} to distinguish success
+     * from failure. {@link TaskCompletionCallback#onError(Throwable)} is invoked when the
+     * status could not be determined (network error while polling, timeout, interruption).</p>
      *
      * @param callback the callback to execute on completion
      * @param proxmox the Proxmox instance to use for status checks
@@ -187,30 +229,32 @@ public class ProxmoxRequest<T> {
     }
 
     /**
-     * Waits for task completion synchronously.
+     * Waits for task completion synchronously, with the default timeout
+     * ({@link #DEFAULT_TASK_TIMEOUT}).
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
      * @return the completed task
-     * @throws ProxmoxAPIError if the task fails
+     * @throws ProxmoxAPIError if the task fails or times out
      * @throws InterruptedException if the thread is interrupted
      */
     public static PveTask waitForCompletion(Proxmox proxmox, PveTask task) throws ProxmoxAPIError, InterruptedException {
-        return waitForCompletion(proxmox, task, Duration.ofSeconds(1), null);
+        return waitForCompletion(proxmox, task, Duration.ofSeconds(1), DEFAULT_TASK_TIMEOUT);
     }
 
     /**
-     * Waits for task completion synchronously with a custom check delay.
+     * Waits for task completion synchronously with a custom check delay, with the
+     * default timeout ({@link #DEFAULT_TASK_TIMEOUT}).
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
      * @param checkDelayMs the delay between status checks in milliseconds
      * @return the completed task
-     * @throws ProxmoxAPIError if the task fails
+     * @throws ProxmoxAPIError if the task fails or times out
      * @throws InterruptedException if the thread is interrupted
      */
     public static PveTask waitForCompletion(Proxmox proxmox, PveTask task, long checkDelayMs) throws ProxmoxAPIError, InterruptedException {
-        return waitForCompletion(proxmox, task, Duration.ofMillis(checkDelayMs), null);
+        return waitForCompletion(proxmox, task, Duration.ofMillis(checkDelayMs), DEFAULT_TASK_TIMEOUT);
     }
 
     /**
@@ -229,30 +273,18 @@ public class ProxmoxRequest<T> {
         if (task == null || !hasValidUpid(task)) {
             return task;
         }
-        
-        try {
-            CompletableFuture<PveTaskStatus> future = defaultAsyncTaskManager.waitForTaskAsync(
-                proxmox, task, checkDelay, timeout
-            );
 
-            future.join();
-            return task;
-        } catch (Exception e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof ProxmoxAPIError) {
-                throw (ProxmoxAPIError) cause;
-            } else if (cause instanceof InterruptedException) {
-                throw (InterruptedException) cause;
-            } else if (cause instanceof TimeoutException) {
-                throw new ProxmoxAPIError("Task timeout exceeded: " + timeout);
-            } else {
-                throw new ProxmoxAPIError("Failed to wait for task completion: " + e.getMessage());
-            }
-        }
+        waitForTaskCompletion(proxmox, task, checkDelay, timeout);
+        return task;
     }
 
     /**
      * Executes the request with configured retry, timeout, and task monitoring settings.
+     *
+     * <p>The retry policy applies to the initial API call only. Once Proxmox has accepted
+     * the request and returned a task, the request is never re-executed: a failure while
+     * waiting for the task is reported as a task-monitoring error (status code -1, original
+     * error as cause), not retried — the task may still be running server-side.</p>
      *
      * <p>If a Proxmox task is returned and {@link #waitForCompletion(Proxmox)} was called,
      * this method blocks until the task completes or times out.</p>
@@ -265,46 +297,54 @@ public class ProxmoxRequest<T> {
      * @throws InterruptedException if the thread is interrupted
      */
     public T execute() throws ProxmoxAPIError, InterruptedException {
+        T result = executeWithRetry();
+
+        PveTask task = extractTaskFromResponse(result);
+
+        if (task != null && hasValidUpid(task)) {
+            if (proxmoxForWait != null) {
+                waitForTaskCompletion(proxmoxForWait, task, taskCheckDelay, taskTimeout);
+            } else if (taskCompletionCallback != null && proxmoxForCallback != null) {
+                defaultAsyncTaskManager.waitForTaskWithCallback(
+                    proxmoxForCallback,
+                    task,
+                    taskCheckDelay,
+                    taskTimeout,
+                    taskCompletionCallback
+                );
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Runs the underlying API call with the configured retry policy.
+     *
+     * <p>Only this initial call is ever retried. Task waiting happens outside this loop
+     * so that a polling failure can never re-execute the original (potentially
+     * non-idempotent) request.</p>
+     */
+    private T executeWithRetry() throws ProxmoxAPIError, InterruptedException {
         int attempts = 0;
         int maxAttempts = retryCount + 1;
         ProxmoxAPIError lastException = null;
-        
+
         while (attempts < maxAttempts) {
             try {
-                T result = requestExecutor.execute();
-                
-                PveTask task = extractTaskFromResponse(result);
-                
-                if (task != null && hasValidUpid(task)) {
-                    if (proxmoxForWait != null) {
-                        waitForTaskCompletion(proxmoxForWait, task, taskCheckDelay, taskTimeout);
-                        return result;
-                    }
-                    
-                    if (taskCompletionCallback != null && proxmoxForCallback != null) {
-                        defaultAsyncTaskManager.waitForTaskWithCallback(
-                            proxmoxForCallback,
-                            task,
-                            taskCheckDelay,
-                            taskTimeout,
-                            taskCompletionCallback
-                        );
-                    }
-                }
-                
-                return result;
+                return requestExecutor.execute();
             } catch (ProxmoxAPIError e) {
                 lastException = e;
                 attempts++;
-                
+
                 if (attempts >= maxAttempts) {
                     break;
                 }
-                
+
                 if (!shouldRetry(e)) {
                     throw e;
                 }
-                
+
                 try {
                     Thread.sleep(retryDelay.toMillis());
                 } catch (InterruptedException ie) {
@@ -313,32 +353,51 @@ public class ProxmoxRequest<T> {
                 }
             }
         }
-        
-        throw lastException != null ? lastException 
+
+        throw lastException != null ? lastException
             : new ProxmoxAPIError("Request failed after " + maxAttempts + " attempts");
     }
     
     /**
      * Waits for task completion internally (blocking).
+     * Throws a {@link ProxmoxAPIError} if the task finished unsuccessfully.
+     *
+     * <p>Polling errors are wrapped in a {@link ProxmoxAPIError} without an HTTP status
+     * code (-1), with the underlying error as cause: they describe a failure to observe
+     * the task, not a failure of the request that created it — the task may still be
+     * running. They must therefore never be treated as retryable request errors.</p>
      */
     private static void waitForTaskCompletion(Proxmox proxmox, PveTask task, Duration checkDelay, Duration timeout)
             throws ProxmoxAPIError, InterruptedException {
+        PveTaskStatus status;
         try {
             CompletableFuture<PveTaskStatus> future = defaultAsyncTaskManager.waitForTaskAsync(
                 proxmox, task, checkDelay, timeout
             );
-            future.join();
+            // get() (unlike join()) lets the waiting thread respond to interruption.
+            status = future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
         } catch (Exception e) {
             Throwable cause = e.getCause();
             if (cause instanceof ProxmoxAPIError) {
-                throw (ProxmoxAPIError) cause;
+                throw new ProxmoxAPIError(
+                    "Task status polling failed for " + task.getUpid()
+                        + "; the task may still be running", cause);
             } else if (cause instanceof InterruptedException) {
                 throw (InterruptedException) cause;
             } else if (cause instanceof TimeoutException) {
                 throw new ProxmoxAPIError("Task timeout exceeded: " + timeout);
             } else {
-                throw new ProxmoxAPIError("Failed to wait for task completion: " + e.getMessage());
+                throw new ProxmoxAPIError("Failed to wait for task completion: " + e.getMessage(), e);
             }
+        }
+        if (status != null && !status.isSuccessful()) {
+            String errorMsg = status.getExitstatus() != null
+                ? "Task failed with exit status: " + status.getExitstatus()
+                : "Task completed with errors";
+            throw new ProxmoxAPIError(errorMsg);
         }
     }
     
@@ -416,7 +475,21 @@ public class ProxmoxRequest<T> {
     
     private boolean shouldRetry(ProxmoxAPIError e) {
         int statusCode = e.getStatusCode();
-        return statusCode == 429 || statusCode == 503 || statusCode >= 500;
+        boolean transientError = statusCode == 429 || statusCode >= 500;
+        return transientError && (retryOnAllMethods || isSafeToRetry(e.getHttpMethod()));
+    }
+
+    /**
+     * Only side-effect-free methods are safe to re-execute automatically. PUT and
+     * DELETE, although idempotent in HTTP terms, are excluded: Proxmox uses PUT for
+     * operations like disk resize with relative sizes ({@code +1G}), where a retry
+     * after a lost response duplicates the effect, and reports an already-completed
+     * DELETE as an error, turning a success into a spurious failure.
+     */
+    private static boolean isSafeToRetry(String httpMethod) {
+        return "GET".equals(httpMethod)
+            || "HEAD".equals(httpMethod)
+            || "OPTIONS".equals(httpMethod);
     }
 }
 

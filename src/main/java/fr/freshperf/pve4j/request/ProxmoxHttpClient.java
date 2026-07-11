@@ -10,18 +10,26 @@ import fr.freshperf.pve4j.SecurityConfig;
 import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.Socket;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.HashMap;
@@ -34,6 +42,8 @@ import java.util.stream.Collectors;
  */
 public class ProxmoxHttpClient {
 
+    private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(30);
+
     private final String apiToken;
     private final String ticket;
     private final String csrfToken;
@@ -41,6 +51,7 @@ public class ProxmoxHttpClient {
     private final String baseUrl;
     private Gson gson;
     private ProxmoxResponseTransformer defaultTransformer;
+    private volatile Duration requestTimeout = DEFAULT_REQUEST_TIMEOUT;
 
     /**
      * Returns the base URL for API requests.
@@ -58,6 +69,30 @@ public class ProxmoxHttpClient {
      */
     public String getTicket() {
         return ticket;
+    }
+
+    /**
+     * Returns the per-request response timeout.
+     *
+     * @return the request timeout (default: 30 seconds)
+     */
+    public Duration getRequestTimeout() {
+        return requestTimeout;
+    }
+
+    /**
+     * Sets the per-request response timeout. If the server does not answer within
+     * this duration, the request fails with a {@link ProxmoxAPIError} instead of
+     * blocking indefinitely.
+     *
+     * @param requestTimeout the maximum time to wait for a response (must be positive)
+     * @throws IllegalArgumentException if the timeout is null, zero or negative
+     */
+    public void setRequestTimeout(Duration requestTimeout) {
+        if (requestTimeout == null || requestTimeout.isZero() || requestTimeout.isNegative()) {
+            throw new IllegalArgumentException("Request timeout must be positive");
+        }
+        this.requestTimeout = requestTimeout;
     }
 
     /**
@@ -114,50 +149,15 @@ public class ProxmoxHttpClient {
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10));
 
-        boolean needsCustomSsl = !securityConfig.shouldVerifySslCertificate();
-        boolean needsHostnameDisabled = !securityConfig.shouldVerifyHostname();
+        boolean verifyCertificate = securityConfig.shouldVerifySslCertificate();
+        boolean verifyHostname = securityConfig.shouldVerifyHostname();
 
-        if (needsCustomSsl || needsHostnameDisabled) {
+        if (!verifyCertificate || !verifyHostname) {
             try {
-                SSLContext sslContext;
-                
-                if (needsCustomSsl) {
-                    TrustManager[] trustAllCerts = new TrustManager[]{
-                        new X509TrustManager() {
-                            @Override
-                            public X509Certificate[] getAcceptedIssuers() {
-                                return new X509Certificate[0];
-                            }
-
-                            @Override
-                            public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                            }
-
-                            @Override
-                            public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                            }
-                        }
-                    };
-                    sslContext = SSLContext.getInstance("TLS");
-                    sslContext.init(null, trustAllCerts, new SecureRandom());
-                } else {
-                    sslContext = SSLContext.getDefault();
-                }
-                
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, selectTrustManagers(verifyCertificate, verifyHostname), new SecureRandom());
                 clientBuilder.sslContext(sslContext);
-
-                if (needsHostnameDisabled) {
-                    System.setProperty(
-                            "jdk.internal.httpclient.disableHostnameVerification",
-                            "true"
-                    );
-                    
-                    SSLParameters sslParameters = new SSLParameters();
-                    sslParameters.setEndpointIdentificationAlgorithm(null);
-                    clientBuilder.sslParameters(sslParameters);
-                }
-
-            } catch (Exception e) {
+            } catch (GeneralSecurityException e) {
                 throw new RuntimeException("Failed to create SSL context", e);
             }
         }
@@ -165,6 +165,134 @@ public class ProxmoxHttpClient {
         this.client = clientBuilder.build();
         this.gson = new Gson();
         this.defaultTransformer = new ProxmoxResponseTransformer();
+    }
+
+    /*
+     * java.net.http.HttpClient always enables endpoint identification ("HTTPS") on its
+     * connections and overrides any SSLParameters that try to unset it; the only other
+     * escape hatch, the jdk.internal.httpclient.disableHostnameVerification system
+     * property, is read once per JVM and affects every HttpClient in the process.
+     * The identity check itself is performed by the trust manager, which is per-client
+     * state, so hostname verification is controlled here:
+     *  - a plain X509TrustManager is wrapped by JSSE in a wrapper that enforces the
+     *    hostname check on top of whatever the delegate accepts;
+     *  - an X509ExtendedTrustManager is used as-is and is solely responsible for both
+     *    chain validation and endpoint identification;
+     *  - the default trust manager's channel-less checkServerTrusted(chain, authType)
+     *    validates the chain but never checks endpoint identity.
+     */
+    private static TrustManager[] selectTrustManagers(boolean verifyCertificate, boolean verifyHostname)
+            throws GeneralSecurityException {
+        if (!verifyCertificate && verifyHostname) {
+            // Plain (non-extended) trust-all manager: JSSE's wrapper still performs the
+            // hostname check against the presented certificate.
+            return new TrustManager[]{
+                new X509TrustManager() {
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+                }
+            };
+        }
+
+        if (!verifyCertificate) {
+            // Extended trust-all manager: neither the chain nor the hostname is verified,
+            // for this client only.
+            return new TrustManager[]{
+                new X509ExtendedTrustManager() {
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType, Socket socket) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType, Socket socket) {
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType, SSLEngine engine) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType, SSLEngine engine) {
+                    }
+                }
+            };
+        }
+
+        // Certificate verified, hostname not: delegate chain validation to the platform
+        // default trust manager through its channel-less methods.
+        X509TrustManager defaultTm = defaultTrustManager();
+        return new TrustManager[]{
+            new X509ExtendedTrustManager() {
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+                    return defaultTm.getAcceptedIssuers();
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] certs, String authType) throws CertificateException {
+                    defaultTm.checkClientTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] certs, String authType) throws CertificateException {
+                    defaultTm.checkServerTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] certs, String authType, Socket socket) throws CertificateException {
+                    defaultTm.checkClientTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] certs, String authType, Socket socket) throws CertificateException {
+                    defaultTm.checkServerTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] certs, String authType, SSLEngine engine) throws CertificateException {
+                    defaultTm.checkClientTrusted(certs, authType);
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] certs, String authType, SSLEngine engine) throws CertificateException {
+                    defaultTm.checkServerTrusted(certs, authType);
+                }
+            }
+        };
+    }
+
+    private static X509TrustManager defaultTrustManager() throws GeneralSecurityException {
+        TrustManagerFactory factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        factory.init((KeyStore) null);
+        for (TrustManager trustManager : factory.getTrustManagers()) {
+            if (trustManager instanceof X509TrustManager x509TrustManager) {
+                return x509TrustManager;
+            }
+        }
+        throw new GeneralSecurityException("No X509TrustManager available from the default TrustManagerFactory");
     }
 
     /**
@@ -237,22 +365,26 @@ public class ProxmoxHttpClient {
      * Executes a request and deserializes the response to the given class.
      */
     <T> T execute(RequestBuilder builder, Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
-        return executeRequest(builder, clazz);
+        // For a plain class, extractElementClass falls back to the raw type and
+        // Gson treats the Class as its Type, so this path subsumes the Class case.
+        return executeRequest(builder, TypeToken.get(clazz));
     }
 
     /**
      * Executes a request and deserializes the response to a parameterized type.
      */
     <T> T executeList(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
-        return executeRequestWithType(builder, typeToken);
+        return executeRequest(builder, typeToken);
     }
-    
-    private <T> T executeRequest(RequestBuilder builder, Class<T> clazz) throws ProxmoxAPIError, InterruptedException {
+
+    private <T> T executeRequest(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
         String url = buildUrl(builder.path, builder.params);
-        
+        Duration timeout = requestTimeout;
+
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(timeout)
                     .header("Content-Type", "application/json");
             
             if (apiToken != null) {
@@ -278,69 +410,7 @@ public class ProxmoxHttpClient {
             if (response.statusCode() >= 400) {
                 throw new ProxmoxAPIError(
                     "HTTP request failed",
-                    response.statusCode(),
-                    response.body(),
-                    url
-                );
-            }
-            
-            JsonElement parsedResponse;
-            try {
-                parsedResponse = JsonParser.parseString(response.body());
-            } catch (JsonSyntaxException e) {
-                throw new ProxmoxAPIError(
-                    "Failed to parse JSON response: " + e.getMessage(),
-                    response.statusCode(),
-                    response.body(),
-                    url
-                );
-            }
-            JsonElement dataElement = extractDataFromResponse(parsedResponse);
-            
-            ResponseTransformer transformer = builder.transformer != null ? builder.transformer : defaultTransformer;
-            JsonElement transformed = transformer.transform(dataElement, clazz);
-            
-            return gson.fromJson(transformed, clazz);
-            
-        } catch (Exception e) {
-            if (e instanceof ProxmoxAPIError) {
-                throw (ProxmoxAPIError) e;
-            }
-            throw new ProxmoxAPIError("Network error: " + e.getMessage(), e);
-        }
-    }
-    
-    private <T> T executeRequestWithType(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
-        String url = buildUrl(builder.path, builder.params);
-        
-        try {
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Content-Type", "application/json");
-            
-            if (apiToken != null) {
-                requestBuilder.header("Authorization", "PVEAPIToken=" + apiToken);
-            } else if (ticket != null) {
-                requestBuilder.header("Cookie", "PVEAuthCookie=" + ticket);
-                if (csrfToken != null && (builder.method.equals("POST") || builder.method.equals("PUT") || 
-                    builder.method.equals("PATCH") || builder.method.equals("DELETE"))) {
-                    requestBuilder.header("CSRFPreventionToken", csrfToken);
-                }
-            }
-
-            switch (builder.method) {
-                case "GET" -> requestBuilder.GET();
-                case "POST" -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
-                case "PUT" -> requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
-                case "PATCH" -> requestBuilder.method("PATCH", HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
-                case "DELETE" -> requestBuilder.DELETE();
-            }
-
-            HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-            
-            if (response.statusCode() >= 400) {
-                throw new ProxmoxAPIError(
-                    "HTTP request failed",
+                    builder.method,
                     response.statusCode(),
                     response.body(),
                     url
@@ -366,7 +436,14 @@ public class ProxmoxHttpClient {
             JsonElement transformed = transformer.transform(dataElement, elementClass);
             
             return gson.fromJson(transformed, typeToken.getType());
-            
+
+        } catch (HttpConnectTimeoutException e) {
+            throw new ProxmoxAPIError("HTTP connection timed out: " + url, e);
+        } catch (HttpTimeoutException e) {
+            throw new ProxmoxAPIError("HTTP request timed out after " + timeout + ": " + url, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
         } catch (Exception e) {
             if (e instanceof ProxmoxAPIError) {
                 throw (ProxmoxAPIError) e;

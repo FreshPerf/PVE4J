@@ -479,6 +479,29 @@ public class PveQemuVm {
     }
 
     /**
+     * Executes a QEMU human monitor command on this VM.
+     * <p>Requires VM.Monitor permission. Proxmox restricts most monitor commands
+     * to root@pam; other users may only run read-only commands (e.g. {@code info ...}).
+     * <p>An invalid or rejected command causes the request to fail with a
+     * {@link fr.freshperf.pve4j.throwable.ProxmoxAPIError} (typically HTTP 500);
+     * some commands are instead accepted by QEMU and report the problem in the
+     * returned output text (e.g. {@code unknown command: '...'}).
+     *
+     * @param command the monitor command to execute (e.g. "info status", "set_password vnc ...")
+     * @return a request returning the raw monitor output
+     */
+    public ProxmoxRequest<String> monitor(String command) {
+        if (command == null || command.isBlank()) {
+            throw new IllegalArgumentException("command cannot be null or empty");
+        }
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/monitor")
+                .param("command", command)
+                .execute(String.class)
+        );
+    }
+
+    /**
      * Converts this VM to a template.
      *
      * @return a request returning the task for tracking

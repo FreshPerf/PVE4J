@@ -9,6 +9,7 @@ public class ProxmoxAPIError extends Exception {
     private final int statusCode;
     private final String responseBody;
     private final String url;
+    private final String httpMethod;
 
     /**
      * Creates an error from another throwable.
@@ -20,6 +21,7 @@ public class ProxmoxAPIError extends Exception {
         this.statusCode = -1;
         this.responseBody = null;
         this.url = null;
+        this.httpMethod = null;
     }
 
     /**
@@ -32,6 +34,7 @@ public class ProxmoxAPIError extends Exception {
         this.statusCode = -1;
         this.responseBody = null;
         this.url = null;
+        this.httpMethod = null;
     }
 
     /**
@@ -45,6 +48,7 @@ public class ProxmoxAPIError extends Exception {
         this.statusCode = -1;
         this.responseBody = null;
         this.url = null;
+        this.httpMethod = null;
     }
 
     /**
@@ -60,6 +64,25 @@ public class ProxmoxAPIError extends Exception {
         this.statusCode = statusCode;
         this.responseBody = responseBody;
         this.url = url;
+        this.httpMethod = null;
+    }
+
+    /**
+     * Creates an error with full HTTP response details, including the HTTP method
+     * of the failed request.
+     *
+     * @param message      the error message
+     * @param httpMethod   the HTTP method of the failed request (e.g. "GET", "POST")
+     * @param statusCode   the HTTP status code
+     * @param responseBody the response body
+     * @param url          the request URL
+     */
+    public ProxmoxAPIError(String message, String httpMethod, int statusCode, String responseBody, String url) {
+        super(message);
+        this.statusCode = statusCode;
+        this.responseBody = responseBody;
+        this.url = url;
+        this.httpMethod = httpMethod;
     }
 
     /**
@@ -76,6 +99,7 @@ public class ProxmoxAPIError extends Exception {
         this.statusCode = statusCode;
         this.responseBody = responseBody;
         this.url = url;
+        this.httpMethod = null;
     }
 
     /**
@@ -103,6 +127,15 @@ public class ProxmoxAPIError extends Exception {
      */
     public String getUrl() {
         return url;
+    }
+
+    /**
+     * Returns the HTTP method of the request that failed, if known.
+     *
+     * @return the HTTP method (e.g. "GET", "POST"), or null if not available
+     */
+    public String getHttpMethod() {
+        return httpMethod;
     }
 
     @Override
