@@ -52,6 +52,9 @@ public class PveFirewallRule {
     @SerializedName("ipversion")
     private Integer ipversion;
 
+    @SerializedName("digest")
+    private String digest;
+
     /**
      * Gets the rule position.
      *
@@ -194,6 +197,16 @@ public class PveFirewallRule {
      */
     public Integer getIpversion() {
         return ipversion;
+    }
+
+    /**
+     * Gets the rules configuration digest (SHA1 of the full rule list, identical on every rule).
+     * Pass it to create/update/delete operations to prevent concurrent modifications.
+     *
+     * @return the digest
+     */
+    public String getDigest() {
+        return digest;
     }
 
     @Override
