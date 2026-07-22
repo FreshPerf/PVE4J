@@ -2,6 +2,7 @@ package fr.freshperf.pve4j.entities.cluster;
 
 import com.google.gson.reflect.TypeToken;
 import fr.freshperf.pve4j.entities.cluster.backup.PveClusterBackup;
+import fr.freshperf.pve4j.entities.cluster.firewall.PveClusterFirewall;
 import fr.freshperf.pve4j.entities.cluster.ha.PveHa;
 import fr.freshperf.pve4j.entities.cluster.resources.PveClusterResources;
 import fr.freshperf.pve4j.request.ProxmoxHttpClient;
@@ -30,6 +31,15 @@ public record PveCluster(ProxmoxHttpClient httpClient) {
      */
     public PveClusterBackup getBackup() {
         return new PveClusterBackup(httpClient);
+    }
+
+    /**
+     * Gets the datacenter-level firewall management interface.
+     *
+     * @return the cluster firewall API facade
+     */
+    public PveClusterFirewall getFirewall() {
+        return new PveClusterFirewall(httpClient);
     }
 
     /**
