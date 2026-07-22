@@ -39,7 +39,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
 - **Configurable Security** - Easily manage SSL/TLS certificate and hostname verification for different environments
 - **Detailed VM Management** - Create, clone, delete, resize disks, and update configurations for QEMU VMs with type-safe builder options
 - **Backup Lifecycle** - Create backups (vzdump), restore VMs and containers from archives, manage backup files (notes, protection, deletion), apply retention/pruning, and drive scheduled cluster backup jobs
-- **Firewall Management** - Configure firewall options, rules, aliases, IP Sets, log and references for QEMU VMs
+- **Firewall Management** - Configure firewall options, rules, aliases, IP Sets, log and references for QEMU VMs, plus datacenter-level macros, security groups and options
 - **Storage Management** - Query storage status, list content, manage backup volumes, and retrieve statistics
 
 ## Current Implementation Status
@@ -52,6 +52,7 @@ PVE4J is a Java library that provides an object-oriented wrapper around the Prox
   - Resource filtering by type
   - **HA (High Availability) management** - List/get/create/delete HA resources and change requested state
   - **Scheduled backup jobs** - List/get/create/update/delete jobs, inspect included volumes, and find guests not covered by any job
+  - **Datacenter firewall** - Predefined macros, security groups (with rule CRUD), and cluster-wide options
 
 - **Node Management**
   - List all nodes
@@ -288,6 +289,11 @@ The library's functionality is structured hierarchically, starting from the main
   - `.getBackup()` - Manage scheduled backup jobs
     - `.getJobs()`, `.getJob(id)`, `.createJob()`, `.updateJob()`, `.deleteJob()`
     - `.getIncludedVolumes(id)`, `.getGuestsNotBackedUp()`, `.getBackupInfo()`
+  - `.getFirewall()` - Manage the datacenter-level firewall
+    - `.getMacros()` - List predefined macros (SSH, HTTP, Ping, ...)
+    - `.getOptions()`, `.updateOptions()` - Cluster-wide firewall options (master toggle, policies)
+    - `.getGroups()`, `.createGroup()`, `.deleteGroup()` - Manage security groups
+    - `.getGroupRules(group)` - Manage the rules of a security group
 - `proxmox.getNodes()` - List all nodes in the cluster
   - `.get("node-name")` - Access a specific node by its name
     - `.getQemu()` - Manage QEMU VMs on the node
