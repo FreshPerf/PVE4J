@@ -139,7 +139,7 @@ Add the dependency:
 <dependency>
     <groupId>fr.freshperf</groupId>
     <artifactId>PVE4J</artifactId>
-    <version>0.2.3</version>
+    <version>0.2.4</version>
 </dependency>
 ```
 
