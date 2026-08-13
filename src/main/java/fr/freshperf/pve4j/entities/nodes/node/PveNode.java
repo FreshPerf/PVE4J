@@ -79,8 +79,8 @@ public class PveNode {
      */
     public ProxmoxRequest<List<PveNodeNetstat>> getNetstat() {
         return new ProxmoxRequest<>(() ->
-            client.get("nodes/" + nodeName + "/netstat").executeList(new TypeToken<List<PveNodeNetstat>>() {
-        }));
+            client.get("nodes/" + nodeName + "/netstat").executeList(new TypeToken<List<PveNodeNetstat>>(){})
+        );
     }
 
     /**

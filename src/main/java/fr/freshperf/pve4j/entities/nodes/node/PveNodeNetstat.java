@@ -20,6 +20,7 @@ public class PveNodeNetstat {
         return out;
     }
 
+    @Override
     public String toString() {
         return "PveNodeNetstat{" +
                 "vmid='" + vmid + '\'' +
