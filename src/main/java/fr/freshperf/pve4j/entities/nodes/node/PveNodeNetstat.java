@@ -5,18 +5,19 @@ package fr.freshperf.pve4j.entities.nodes.node;
  */
 public class PveNodeNetstat {
 
-    private String vmid,dev,in,out;
+    private long vmid,in,out;
+    private String dev;
 
-    public String getVmid() {
+    public long getVmid() {
         return vmid;
     }
     public String getDev() {
         return dev;
     }
-    public String getIn() {
+    public long getIn() {
         return in;
     }
-    public String getOut() {
+    public long getOut() {
         return out;
     }
 
