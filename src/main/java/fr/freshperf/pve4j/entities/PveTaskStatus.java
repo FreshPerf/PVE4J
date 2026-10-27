@@ -134,12 +134,24 @@ public class PveTaskStatus {
     }
 
     /**
-     * Checks if the task completed successfully.
+     * Checks if the task completed successfully. Like Proxmox VE itself, a task that finished
+     * with warnings (exit status "WARNINGS: n") is considered successful; use
+     * {@link #hasWarnings()} to detect that case.
      *
-     * @return true if completed with OK status or no exit status
+     * @return true if completed with OK or WARNINGS status, or no exit status
      */
     public boolean isSuccessful() {
-        return isCompleted() && (exitstatus == null || "OK".equals(exitstatus) || "0".equals(exitstatus));
+        return isCompleted() && (exitstatus == null || "OK".equals(exitstatus) || "0".equals(exitstatus)
+                || hasWarnings());
+    }
+
+    /**
+     * Checks if the task finished with warnings.
+     *
+     * @return true if the exit status is "WARNINGS: n"
+     */
+    public boolean hasWarnings() {
+        return exitstatus != null && exitstatus.matches("WARNINGS: \\d+");
     }
 }
 
