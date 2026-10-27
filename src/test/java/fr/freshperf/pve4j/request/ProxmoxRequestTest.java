@@ -4,6 +4,8 @@ import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.*;
@@ -183,6 +185,62 @@ class ProxmoxRequestTest {
         String result = request.execute();
 
         assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("Should execute request asynchronously")
+    void shouldExecuteAsync() {
+        ProxmoxRequest<String> request = new ProxmoxRequest<>(() -> Thread.currentThread().isVirtual() ? "virtual" : "platform");
+
+        assertThat(request.executeAsync().join()).isEqualTo("virtual");
+    }
+
+    @Test
+    @DisplayName("Should complete async request exceptionally with the API error")
+    void shouldPropagateErrorAsync() {
+        ProxmoxAPIError expectedError = new ProxmoxAPIError("Test error", "POST", 500, "Error body", "http://test.com");
+        ProxmoxRequest<String> request = new ProxmoxRequest<>(() -> {
+            throw expectedError;
+        });
+
+        assertThatThrownBy(() -> request.executeAsync().join())
+            .isInstanceOf(CompletionException.class)
+            .hasCause(expectedError);
+    }
+
+    @Test
+    @DisplayName("Should apply retry policy to async requests")
+    void shouldRetryAsync() {
+        AtomicInteger attempts = new AtomicInteger(0);
+        ProxmoxRequest<String> request = new ProxmoxRequest<>(() -> {
+            if (attempts.incrementAndGet() < 2) {
+                throw new ProxmoxAPIError("Temporary error", "GET", 503, "Service unavailable", "http://test.com");
+            }
+            return "ok";
+        });
+
+        assertThat(request.retry(2).retryDelay(10).executeAsync().join()).isEqualTo("ok");
+        assertThat(attempts.get()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Should return a failed future when the async request cannot be started")
+    void shouldFailAsyncWhenThreadManagersAreShutDown() {
+        ProxmoxThreadManager stopped = new ProxmoxThreadManager();
+        ProxmoxRequest.setThreadManagers(stopped, new ProxmoxAsyncTaskManager(stopped));
+        stopped.shutdown();
+        try {
+            CompletableFuture<String> future = new ProxmoxRequest<>(() -> "never").executeAsync();
+
+            assertThat(future).isCompletedExceptionally();
+            // Callbacks see the same CompletionException wrapping as for a failed call
+            assertThat(future.handle((result, error) -> error).join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class);
+        } finally {
+            ProxmoxThreadManager fresh = new ProxmoxThreadManager();
+            ProxmoxRequest.setThreadManagers(fresh, new ProxmoxAsyncTaskManager(fresh));
+        }
     }
 
     @Test

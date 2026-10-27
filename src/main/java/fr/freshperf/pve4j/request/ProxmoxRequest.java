@@ -9,6 +9,7 @@ import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -162,9 +163,11 @@ public class ProxmoxRequest<T> {
     }
 
     /**
-     * Configures the delay between task status checks.
+     * Configures the interval between task status checks. To notice short tasks
+     * quickly, the first checks happen at 1/8, 1/4 and 1/2 of the interval, then
+     * at every multiple of it.
      *
-     * @param milliseconds the delay in milliseconds
+     * @param milliseconds the interval in milliseconds
      * @return this instance for method chaining
      */
     public ProxmoxRequest<T> taskCheckDelay(long milliseconds) {
@@ -173,9 +176,11 @@ public class ProxmoxRequest<T> {
     }
 
     /**
-     * Configures the delay between task status checks.
+     * Configures the interval between task status checks. To notice short tasks
+     * quickly, the first checks happen at 1/8, 1/4 and 1/2 of the interval, then
+     * at every multiple of it.
      *
-     * @param duration the delay duration
+     * @param duration the interval duration
      * @return this instance for method chaining
      */
     public ProxmoxRequest<T> taskCheckDelay(Duration duration) {
@@ -248,7 +253,8 @@ public class ProxmoxRequest<T> {
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
-     * @param checkDelayMs the delay between status checks in milliseconds
+     * @param checkDelayMs the interval between status checks in milliseconds (the first
+     *                     checks happen sooner, see {@link #taskCheckDelay(Duration)})
      * @return the completed task
      * @throws ProxmoxAPIError if the task fails or times out
      * @throws InterruptedException if the thread is interrupted
@@ -262,7 +268,8 @@ public class ProxmoxRequest<T> {
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
-     * @param checkDelay the delay between status checks
+     * @param checkDelay the interval between status checks (the first checks happen
+     *                   sooner, see {@link #taskCheckDelay(Duration)})
      * @param timeout the maximum timeout (null for no timeout)
      * @return the completed task
      * @throws ProxmoxAPIError if the task fails or times out
@@ -316,6 +323,51 @@ public class ProxmoxRequest<T> {
         }
 
         return result;
+    }
+
+    /**
+     * Executes the request asynchronously on a virtual thread, with the same
+     * retry, task waiting and callback behavior as {@link #execute()}.
+     *
+     * <p>Proxmox handles several requests concurrently, so independent calls
+     * (e.g. reading the status of many VMs) complete much faster when issued
+     * together than one after another:</p>
+     * <pre>{@code
+     * List<CompletableFuture<PveQemuStatus>> futures = vmids.stream()
+     *     .map(id -> qemu.get(id).getStatus().executeAsync())
+     *     .toList();
+     * List<PveQemuStatus> statuses = futures.stream().map(CompletableFuture::join).toList();
+     * }</pre>
+     *
+     * <p>Each pending call holds its own connection to Proxmox, which only serves a
+     * limited number of requests in parallel (throughput stopped improving beyond
+     * roughly 8 concurrent requests on a default installation): for large batches,
+     * bound the number of calls in flight rather than starting them all at once.</p>
+     *
+     * <p>The future completes exceptionally with a {@link CompletionException} whose
+     * cause is the exception that {@link #execute()} would have thrown (usually a
+     * {@link ProxmoxAPIError} or an {@link InterruptedException}), or the exception
+     * that prevented the call from being started (e.g. the thread managers were shut
+     * down). Cancelling the returned future does not abort the request already sent
+     * to Proxmox.</p>
+     *
+     * @return a future completed with the result of the request
+     */
+    public CompletableFuture<T> executeAsync() {
+        try {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    return execute();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new CompletionException(e);
+                } catch (ProxmoxAPIError e) {
+                    throw new CompletionException(e);
+                }
+            }, defaultThreadManager.getVirtualThreadExecutor());
+        } catch (RuntimeException e) {
+            return CompletableFuture.failedFuture(new CompletionException(e));
+        }
     }
 
     /**

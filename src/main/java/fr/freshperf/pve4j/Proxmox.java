@@ -113,11 +113,10 @@ public class Proxmox {
         
         PveAccessTicket ticket = tempAccess.getTicket(username, password, realm).execute();
         
-        ProxmoxHttpClient authenticatedClient = new ProxmoxHttpClient(
-            baseUrl, 
-            ticket.getTicket(), 
-            ticket.getCSRFPreventionToken(), 
-            securityConfig
+        // Reuse the login connection (and its TLS session) for the authenticated client.
+        ProxmoxHttpClient authenticatedClient = tempClient.withTicket(
+            ticket.getTicket(),
+            ticket.getCSRFPreventionToken()
         );
         
         return new Proxmox(authenticatedClient);

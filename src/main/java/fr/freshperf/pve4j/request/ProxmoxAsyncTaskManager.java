@@ -27,6 +27,16 @@ public class ProxmoxAsyncTaskManager {
      */
     private static final int MAX_CONSECUTIVE_POLL_FAILURES = 3;
 
+    /**
+     * Number of halvings of the check interval used for the first checks. Many
+     * Proxmox tasks (config updates, stops, small resizes) finish well under a
+     * second, so the first checks happen at 1/8, 1/4 and 1/2 of the interval,
+     * then at every multiple of the interval. Check times are measured from the
+     * start of the wait, so the extra early checks never delay the later ones;
+     * this costs at most three extra status requests per task.
+     */
+    private static final int RAMP_UP_STEPS = 3;
+
     private final ProxmoxThreadManager threadManager;
     private final ScheduledExecutorService scheduler;
 
@@ -54,7 +64,8 @@ public class ProxmoxAsyncTaskManager {
      *
      * @param proxmox the Proxmox instance to check status
      * @param task the task to monitor
-     * @param checkInterval the interval between checks
+     * @param checkInterval the interval between checks (the first checks happen at
+     *                      1/8, 1/4 and 1/2 of it to notice short tasks quickly)
      * @param timeout the maximum timeout (null for no timeout)
      * @return a CompletableFuture containing the final status
      */
@@ -91,7 +102,8 @@ public class ProxmoxAsyncTaskManager {
      *
      * @param proxmox the Proxmox instance to check status
      * @param task the task to monitor
-     * @param checkInterval the interval between checks
+     * @param checkInterval the interval between checks (the first checks happen at
+     *                      1/8, 1/4 and 1/2 of it to notice short tasks quickly)
      * @param timeout the maximum timeout (null for no timeout)
      * @param callback the callback to execute on completion
      * @return a CompletableFuture for task control
@@ -132,6 +144,7 @@ public class ProxmoxAsyncTaskManager {
      */
     private PveTaskStatus pollTaskStatus(Proxmox proxmox, PveTask task, Duration checkInterval, Duration timeout) {
         Instant deadline = timeout != null ? Instant.now().plus(timeout) : null;
+        long startNanos = System.nanoTime();
         int consecutiveFailures = 0;
         try {
             while (!Thread.currentThread().isInterrupted()) {
@@ -155,7 +168,12 @@ public class ProxmoxAsyncTaskManager {
                     }
                 }
 
-                long sleepMillis = checkInterval.toMillis();
+                // After a failed check, wait the full interval so that the failure
+                // tolerance window is not shortened by the ramp-up.
+                long sleepMillis = consecutiveFailures > 0
+                    ? checkInterval.toMillis()
+                    : pollDelayMillis(checkInterval.toMillis(),
+                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos));
                 if (deadline != null) {
                     long remainingMillis = Duration.between(Instant.now(), deadline).toMillis();
                     sleepMillis = Math.min(sleepMillis, Math.max(1, remainingMillis));
@@ -167,6 +185,27 @@ public class ProxmoxAsyncTaskManager {
             Thread.currentThread().interrupt();
             throw new CompletionException("Task polling interrupted", e);
         }
+    }
+
+    /**
+     * Returns the delay until the next check, given the time elapsed since the
+     * wait started. Checks are due at interval/8, interval/4, interval/2, then at
+     * every multiple of the interval; check times that have already passed (for
+     * instance because a status request was slow) are skipped.
+     */
+    static long pollDelayMillis(long intervalMillis, long elapsedMillis) {
+        if (intervalMillis <= 0) {
+            return intervalMillis;
+        }
+        if (intervalMillis >= (1L << RAMP_UP_STEPS)) {
+            for (int shift = RAMP_UP_STEPS; shift > 0; shift--) {
+                long checkTime = intervalMillis >> shift;
+                if (elapsedMillis < checkTime) {
+                    return checkTime - elapsedMillis;
+                }
+            }
+        }
+        return intervalMillis - (elapsedMillis % intervalMillis);
     }
 
     /**

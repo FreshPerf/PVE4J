@@ -273,6 +273,25 @@ try {
 }
 ```
 
+### Performance Tips
+
+**Run independent requests concurrently.** Each request spends most of its time waiting for Proxmox, so issuing independent calls together with `executeAsync()` is much faster than running them one after another (about 5x for 26 VM statuses on a single node). Proxmox only serves a limited number of requests in parallel (throughput stopped improving beyond about 8 requests in flight on a default installation), so bound the number of calls in flight for large batches.
+
+```java
+PveQemu qemu = proxmox.getNodes().get("pve-node-01").getQemu();
+
+List<CompletableFuture<PveQemuStatus>> futures = List.of(100, 101, 102).stream()
+        .map(vmid -> qemu.get(vmid).getStatus().executeAsync())
+        .toList();
+List<PveQemuStatus> statuses = futures.stream().map(CompletableFuture::join).toList();
+```
+
+**Prefer one aggregated call over many small ones.** `proxmox.getCluster().getResources("vm").execute()` returns the status, CPU, memory and disk usage of every guest in the cluster in a single request, which is far cheaper than calling `getStatus()` for each VM.
+
+**Enable compression on slow links.** When Proxmox is reached over the Internet or a VPN, `proxmox.getHttpClient().setCompressionEnabled(true)` makes large responses (resource lists, RRD data) 5 to 6 times smaller. Leave it off on a LAN, where compressing costs Proxmox more time than it saves.
+
+**Task waiting.** `waitForCompletion()` and `onCompletion()` check the task status at 1/8, 1/4 and 1/2 of the check interval (`taskCheckDelay`, 1 second by default), then at every multiple of it, so short tasks such as configuration updates are observed in about 125 ms instead of 1 second. This costs at most three extra status requests per task.
+
 ## API Overview
 
 The library's functionality is structured hierarchically, starting from the main `Proxmox` object:

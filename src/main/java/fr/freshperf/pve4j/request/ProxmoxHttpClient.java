@@ -3,6 +3,7 @@ package fr.freshperf.pve4j.request;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
@@ -15,6 +16,9 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.Socket;
@@ -25,6 +29,7 @@ import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -33,8 +38,10 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 /**
  * HTTP client for making requests to the Proxmox VE API.
@@ -52,6 +59,7 @@ public class ProxmoxHttpClient {
     private Gson gson;
     private ProxmoxResponseTransformer defaultTransformer;
     private volatile Duration requestTimeout = DEFAULT_REQUEST_TIMEOUT;
+    private volatile boolean compressionEnabled = false;
 
     /**
      * Returns the base URL for API requests.
@@ -93,6 +101,28 @@ public class ProxmoxHttpClient {
             throw new IllegalArgumentException("Request timeout must be positive");
         }
         this.requestTimeout = requestTimeout;
+    }
+
+    /**
+     * Returns whether responses are requested gzip-compressed.
+     *
+     * @return true if compression is enabled (default: false)
+     */
+    public boolean isCompressionEnabled() {
+        return compressionEnabled;
+    }
+
+    /**
+     * Enables or disables gzip compression of responses. When enabled, Proxmox
+     * compresses larger responses (resource lists, RRD data, task logs...), which
+     * typically makes them 5 to 6 times smaller. This only pays off on slow or
+     * remote links: on a LAN, the time Proxmox spends compressing outweighs the
+     * transfer time saved, so compression is disabled by default.
+     *
+     * @param compressionEnabled true to request compressed responses
+     */
+    public void setCompressionEnabled(boolean compressionEnabled) {
+        this.compressionEnabled = compressionEnabled;
     }
 
     /**
@@ -311,6 +341,33 @@ public class ProxmoxHttpClient {
         initializeClient(securityConfig);
     }
 
+    private ProxmoxHttpClient(ProxmoxHttpClient connectionSource, String ticket, String csrfToken) {
+        this.baseUrl = connectionSource.baseUrl;
+        this.apiToken = null;
+        this.ticket = ticket;
+        this.csrfToken = csrfToken;
+        this.client = connectionSource.client;
+        this.gson = connectionSource.gson;
+        this.defaultTransformer = connectionSource.defaultTransformer;
+        this.requestTimeout = connectionSource.requestTimeout;
+        this.compressionEnabled = connectionSource.compressionEnabled;
+    }
+
+    /**
+     * Creates a ticket-authenticated client that reuses this client's connections,
+     * so the TLS session established while logging in is kept for the following
+     * requests instead of a new handshake being made. The request timeout and the
+     * compression setting are copied: changing them later on one client does not
+     * affect the other.
+     *
+     * @param ticket    the authentication ticket
+     * @param csrfToken the CSRF prevention token
+     * @return a new HTTP client sharing this client's connection pool and SSL settings
+     */
+    public ProxmoxHttpClient withTicket(String ticket, String csrfToken) {
+        return new ProxmoxHttpClient(this, ticket, csrfToken);
+    }
+
     /**
      * Creates a GET request builder.
      *
@@ -378,14 +435,23 @@ public class ProxmoxHttpClient {
     }
 
     private <T> T executeRequest(RequestBuilder builder, TypeToken<T> typeToken) throws ProxmoxAPIError, InterruptedException {
-        String url = buildUrl(builder.path, builder.params);
+        // POST/PUT parameters travel in a form-encoded body rather than in the query
+        // string, so that secrets (passwords, keys) never appear in URLs, which pveproxy
+        // writes to its access log. pveproxy decodes both the same way.
+        boolean formBody = builder.body == null && !builder.params.isEmpty()
+                && (builder.method.equals("POST") || builder.method.equals("PUT"));
+        String url = formBody ? baseUrl + builder.path : buildUrl(builder.path, builder.params);
+        String requestBody = formBody ? encodeParams(builder.params) : builder.body != null ? builder.body : "{}";
         Duration timeout = requestTimeout;
 
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .timeout(timeout)
-                    .header("Content-Type", "application/json");
+                    .header("Content-Type", formBody ? "application/x-www-form-urlencoded" : "application/json");
+            if (compressionEnabled) {
+                requestBuilder.header("Accept-Encoding", "gzip");
+            }
             
             if (apiToken != null) {
                 requestBuilder.header("Authorization", "PVEAPIToken=" + apiToken);
@@ -399,32 +465,33 @@ public class ProxmoxHttpClient {
 
             switch (builder.method) {
                 case "GET" -> requestBuilder.GET();
-                case "POST" -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
-                case "PUT" -> requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
+                case "POST" -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(requestBody));
+                case "PUT" -> requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(requestBody));
                 case "PATCH" -> requestBuilder.method("PATCH", HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
                 case "DELETE" -> requestBuilder.DELETE();
             }
 
-            HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            HttpResponse<byte[]> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray());
+            String body = decodeBody(response, url);
             
             if (response.statusCode() >= 400) {
                 throw new ProxmoxAPIError(
                     "HTTP request failed",
                     builder.method,
                     response.statusCode(),
-                    response.body(),
+                    body,
                     url
                 );
             }
             
             JsonElement parsedResponse;
             try {
-                parsedResponse = JsonParser.parseString(response.body());
+                parsedResponse = JsonParser.parseString(body);
             } catch (JsonSyntaxException e) {
                 throw new ProxmoxAPIError(
                     "Failed to parse JSON response: " + e.getMessage(),
                     response.statusCode(),
-                    response.body(),
+                    body,
                     url
                 );
             }
@@ -435,7 +502,18 @@ public class ProxmoxHttpClient {
             ResponseTransformer transformer = builder.transformer != null ? builder.transformer : defaultTransformer;
             JsonElement transformed = transformer.transform(dataElement, elementClass);
             
-            return gson.fromJson(transformed, typeToken.getType());
+            try {
+                return gson.fromJson(transformed, typeToken.getType());
+            } catch (JsonParseException e) {
+                // The body is left out: a successful response may hold secrets (tickets, token values).
+                throw new ProxmoxAPIError(
+                    "Failed to map response to " + typeToken.getType().getTypeName() + ": " + e.getMessage(),
+                    response.statusCode(),
+                    null,
+                    url,
+                    e
+                );
+            }
 
         } catch (HttpConnectTimeoutException e) {
             throw new ProxmoxAPIError("HTTP connection timed out: " + url, e);
@@ -452,6 +530,52 @@ public class ProxmoxHttpClient {
         }
     }
     
+    /*
+     * Decodes the response body, inflating it when the server compressed it
+     * (pveproxy gzips larger responses when the request advertises gzip support,
+     * see setCompressionEnabled).
+     * The charset is taken from the Content-Type header, defaulting to UTF-8, as
+     * BodyHandlers.ofString() does.
+     */
+    private static String decodeBody(HttpResponse<byte[]> response, String url) throws ProxmoxAPIError {
+        byte[] bytes = response.body();
+        Charset charset = responseCharset(response);
+        String encoding = response.headers().firstValue("Content-Encoding").orElse("").trim().toLowerCase(Locale.ROOT);
+        if (bytes.length > 0 && (encoding.equals("gzip") || encoding.equals("x-gzip"))) {
+            try (InputStream in = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
+                bytes = in.readAllBytes();
+            } catch (IOException e) {
+                if (response.statusCode() >= 400) {
+                    // Keep the HTTP status (and thus the retry policy) for error responses.
+                    return new String(bytes, charset);
+                }
+                throw new ProxmoxAPIError(
+                    "Failed to decompress response: " + e,
+                    response.statusCode(),
+                    null,
+                    url,
+                    e
+                );
+            }
+        }
+        return new String(bytes, charset);
+    }
+
+    private static Charset responseCharset(HttpResponse<?> response) {
+        String contentType = response.headers().firstValue("Content-Type").orElse("");
+        for (String part : contentType.split(";")) {
+            String param = part.trim();
+            if (param.regionMatches(true, 0, "charset=", 0, 8)) {
+                try {
+                    return Charset.forName(param.substring(8).replace("\"", "").trim());
+                } catch (IllegalArgumentException e) {
+                    return StandardCharsets.UTF_8;
+                }
+            }
+        }
+        return StandardCharsets.UTF_8;
+    }
+
     private Class<?> extractElementClass(TypeToken<?> typeToken) {
         Type type = typeToken.getType();
         
@@ -483,13 +607,16 @@ public class ProxmoxHttpClient {
     private String buildUrl(String path, Map<String, Object> params) {
         StringBuilder url = new StringBuilder(baseUrl + path);
         if (!params.isEmpty()) {
-            String query = params.entrySet().stream()
-                    .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8)
-                            + "=" + URLEncoder.encode(e.getValue().toString(), StandardCharsets.UTF_8))
-                    .collect(Collectors.joining("&"));
-            url.append("?").append(query);
+            url.append("?").append(encodeParams(params));
         }
         return url.toString();
+    }
+
+    private static String encodeParams(Map<String, Object> params) {
+        return params.entrySet().stream()
+                .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8)
+                        + "=" + URLEncoder.encode(e.getValue().toString(), StandardCharsets.UTF_8))
+                .collect(Collectors.joining("&"));
     }
 
     /**
@@ -511,7 +638,8 @@ public class ProxmoxHttpClient {
         }
 
         /**
-         * Adds a query parameter to the request.
+         * Adds a parameter to the request. It is sent in the query string, or in a
+         * form-encoded body for POST and PUT requests without a JSON body.
          *
          * @param key   the parameter name
          * @param value the parameter value
@@ -523,7 +651,7 @@ public class ProxmoxHttpClient {
         }
 
         /**
-         * Adds multiple query parameters to the request.
+         * Adds multiple parameters to the request (see {@link #param(String, Object)}).
          *
          * @param params map of parameter names to values
          * @return this builder for chaining
@@ -534,7 +662,8 @@ public class ProxmoxHttpClient {
         }
 
         /**
-         * Sets the JSON body for the request.
+         * Sets the JSON body for the request. The parameters are then sent in the
+         * query string.
          *
          * @param json the JSON string body
          * @return this builder for chaining

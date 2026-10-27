@@ -140,10 +140,13 @@ public class ProxmoxAPIError extends Exception {
 
     @Override
     public String getMessage() {
+        if (statusCode > 0 && responseBody == null) {
+            return String.format("%s | Status: %d | URL: %s", super.getMessage(), statusCode, url);
+        }
         if (statusCode > 0) {
             return String.format("%s | Status: %d | URL: %s | Response: %s",
                 super.getMessage(), statusCode, url,
-                responseBody != null && responseBody.length() > 200
+                responseBody.length() > 200
                     ? responseBody.substring(0, 200) + "..."
                     : responseBody);
         }
