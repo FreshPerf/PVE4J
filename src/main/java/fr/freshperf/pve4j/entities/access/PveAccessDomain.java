@@ -1,12 +1,14 @@
 package fr.freshperf.pve4j.entities.access;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Represents a Proxmox authentication domain/realm.
  */
 public class PveAccessDomain {
 
-    private String realm, type, comment;
-    private int tfa;
+    private String realm, type, comment, tfa;
+    @SerializedName("default")
     private boolean default_;
 
     public String getRealm() {
@@ -21,7 +23,12 @@ public class PveAccessDomain {
         return comment;
     }
 
-    public int getTfa() {
+    /**
+     * Gets the two-factor authentication provider enforced for this realm.
+     *
+     * @return "oath" or "yubico", or null if none is configured
+     */
+    public String getTfa() {
         return tfa;
     }
 
@@ -35,8 +42,8 @@ public class PveAccessDomain {
                 "realm='" + realm + '\'' +
                 ", type='" + type + '\'' +
                 ", comment='" + comment + '\'' +
+                ", tfa='" + tfa + '\'' +
                 ", default=" + default_ +
                 '}';
     }
 }
-

@@ -33,9 +33,12 @@ public record PveAccessGroups(ProxmoxHttpClient httpClient) {
         if (groupid == null || groupid.isEmpty()) {
             throw new IllegalArgumentException("Group ID cannot be null or empty");
         }
-        return new ProxmoxRequest<>(() -> 
-            httpClient.get("access/groups/" + groupid).execute(PveAccessGroup.class)
-        );
+        return new ProxmoxRequest<>(() -> {
+            PveAccessGroup group = httpClient.get("access/groups/" + groupid).execute(PveAccessGroup.class);
+            // The group ID is not part of the response
+            group.setGroupid(groupid);
+            return group;
+        });
     }
 }
 

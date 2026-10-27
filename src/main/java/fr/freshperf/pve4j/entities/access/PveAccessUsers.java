@@ -4,6 +4,8 @@ import com.google.gson.reflect.TypeToken;
 import fr.freshperf.pve4j.request.ProxmoxHttpClient;
 import fr.freshperf.pve4j.request.ProxmoxRequest;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -33,9 +35,14 @@ public record PveAccessUsers(ProxmoxHttpClient httpClient) {
         if (userid == null || userid.isEmpty()) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
         }
-        return new ProxmoxRequest<>(() -> 
-            httpClient.get("access/users/" + userid).execute(PveAccessUser.class)
-        );
+        // User names may contain characters such as '#' or '?' that must be escaped in a path
+        String encodedUserid = URLEncoder.encode(userid, StandardCharsets.UTF_8).replace("+", "%20");
+        return new ProxmoxRequest<>(() -> {
+            PveAccessUser user = httpClient.get("access/users/" + encodedUserid).execute(PveAccessUser.class);
+            // The user ID is not part of the response
+            user.setUserid(userid);
+            return user;
+        });
     }
 }
 

@@ -25,33 +25,47 @@ public record PveAccess(ProxmoxHttpClient httpClient) {
 
     /**
      * Gets an authentication ticket using username/password.
+     * <p>
+     * Proxmox appends the realm to the username ({@code <username>@<realm>}), so the realm is
+     * not sent again when the username already ends with {@code @<realm>}. When no realm is given,
+     * a username without realm is authenticated against "pam" and a {@code user@realm} username
+     * is sent as is.
      *
-     * @param username the username
+     * @param username the username, with or without the {@code @realm} suffix
      * @param password the password
-     * @param realm    the authentication realm (e.g., "pam", "pve")
+     * @param realm    the authentication realm (e.g., "pam", "pve"), or null
      * @return a request returning the authentication ticket
      */
     public ProxmoxRequest<PveAccessTicket> getTicket(String username, String password, String realm) {
+        String effectiveRealm = realm;
+        if (effectiveRealm == null || effectiveRealm.isEmpty()) {
+            effectiveRealm = username != null && username.contains("@") ? null : "pam";
+        } else if (username != null && username.endsWith("@" + effectiveRealm)) {
+            effectiveRealm = null;
+        }
+        String realmParam = effectiveRealm;
         return new ProxmoxRequest<>(() -> {
             var builder = httpClient.post("access/ticket")
                 .param("username", username)
                 .param("password", password);
-            if (realm != null && !realm.isEmpty()) {
-                builder.param("realm", realm);
+            if (realmParam != null) {
+                builder.param("realm", realmParam);
             }
             return builder.execute(PveAccessTicket.class);
         });
     }
 
     /**
-     * Gets an authentication ticket using the default PAM realm.
+     * Gets an authentication ticket. A username without realm (e.g. "root") is authenticated
+     * against the PAM realm; a full user ID (e.g. "john@pve") is used as is.
+     * For a PAM user whose name itself contains '@', pass the full user ID (e.g. "user@example.com@pam").
      *
-     * @param username the username
+     * @param username the username or full user ID
      * @param password the password
      * @return a request returning the authentication ticket
      */
     public ProxmoxRequest<PveAccessTicket> getTicket(String username, String password) {
-        return getTicket(username, password, "pam");
+        return getTicket(username, password, null);
     }
 
     /**

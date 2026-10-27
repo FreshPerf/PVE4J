@@ -100,7 +100,8 @@ public class Proxmox {
      * @param port The Proxmox API port (usually 8006 or 443)
      * @param username The username for authentication
      * @param password The password for authentication
-     * @param realm The authentication realm (default: pam)
+     * @param realm The authentication realm (e.g. "pam", "pve"), or null to use PAM for a username
+     *              without realm; it is not sent again when the username already ends with {@code @realm}
      * @param securityConfig Security configuration for SSL/TLS
      * @return A new Proxmox instance authenticated with username/password
      * @throws ProxmoxAPIError If authentication fails
@@ -123,12 +124,14 @@ public class Proxmox {
     }
 
     /**
-     * Creates a Proxmox API client using username and password authentication with default PAM realm.
+     * Creates a Proxmox API client using username and password authentication.
      * This method authenticates with the Proxmox server and obtains a ticket for subsequent requests.
+     * A username without realm (e.g. "root") uses the PAM realm; a full user ID (e.g. "john@pve") is used as is.
+     * For a PAM user whose name itself contains '@', pass the full user ID (e.g. "user@example.com@pam").
      * 
      * @param host The Proxmox host address
      * @param port The Proxmox API port (usually 8006 or 443)
-     * @param username The username for authentication
+     * @param username The username (e.g. "root") or full user ID (e.g. "john@pve")
      * @param password The password for authentication
      * @param securityConfig Security configuration for SSL/TLS
      * @return A new Proxmox instance authenticated with username/password
@@ -136,23 +139,25 @@ public class Proxmox {
      * @throws InterruptedException If the request is interrupted
      */
     public static Proxmox createWithPassword(String host, int port, String username, String password, SecurityConfig securityConfig) throws ProxmoxAPIError, InterruptedException {
-        return createWithPassword(host, port, username, password, "pam", securityConfig);
+        return createWithPassword(host, port, username, password, null, securityConfig);
     }
 
     /**
      * Creates a Proxmox API client using username and password authentication with default secure settings.
      * This method authenticates with the Proxmox server and obtains a ticket for subsequent requests.
+     * A username without realm (e.g. "root") uses the PAM realm; a full user ID (e.g. "john@pve") is used as is.
+     * For a PAM user whose name itself contains '@', pass the full user ID (e.g. "user@example.com@pam").
      * 
      * @param host The Proxmox host address
      * @param port The Proxmox API port (usually 8006 or 443)
-     * @param username The username for authentication
+     * @param username The username (e.g. "root") or full user ID (e.g. "john@pve")
      * @param password The password for authentication
      * @return A new Proxmox instance authenticated with username/password
      * @throws ProxmoxAPIError If authentication fails
      * @throws InterruptedException If the request is interrupted
      */
     public static Proxmox createWithPassword(String host, int port, String username, String password) throws ProxmoxAPIError, InterruptedException {
-        return createWithPassword(host, port, username, password, "pam", SecurityConfig.secure());
+        return createWithPassword(host, port, username, password, null, SecurityConfig.secure());
     }
 
     /**
