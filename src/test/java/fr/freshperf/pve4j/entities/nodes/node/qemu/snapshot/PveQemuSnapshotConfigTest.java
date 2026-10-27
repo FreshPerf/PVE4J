@@ -28,5 +28,6 @@ class PveQemuSnapshotConfigTest {
         assertThat(PveJson.parse("{\"memory\":\"4096\"}", PveQemuSnapshotConfig.class).getMemory()).isEqualTo(4096);
         assertThat(PveJson.parse("{\"memory\":4096}", PveQemuSnapshotConfig.class).getMemory()).isEqualTo(4096);
         assertThat(PveJson.parse("{}", PveQemuSnapshotConfig.class).getMemory()).isNull();
+        assertThat(PveJson.parse("{\"memory\":\"current=abc\"}", PveQemuSnapshotConfig.class).getMemory()).isNull();
     }
 }

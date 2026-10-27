@@ -193,7 +193,7 @@ public class PveQemuConfig {
      * <p>The API returns {@code memory} as a property string whose default key is
      * {@code current}, so both {@code "4096"} and {@code "current=4096"} are valid.
      *
-     * @return the {@code current} memory in MiB, or 0 if not set
+     * @return the {@code current} memory in MiB, or 0 if not set (or not a number)
      */
     public int getMemory() {
         if (memory == null || memory.isBlank()) {
@@ -201,11 +201,14 @@ public class PveQemuConfig {
         }
         for (String part : memory.split(",")) {
             String token = part.trim();
-            if (token.startsWith("current=")) {
-                return Integer.parseInt(token.substring("current=".length()).trim());
-            }
-            if (!token.contains("=")) {
-                return Integer.parseInt(token);
+            String value = token.startsWith("current=") ? token.substring("current=".length()).trim()
+                    : !token.contains("=") ? token : null;
+            if (value != null) {
+                try {
+                    return Integer.parseInt(value);
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
             }
         }
         return 0;

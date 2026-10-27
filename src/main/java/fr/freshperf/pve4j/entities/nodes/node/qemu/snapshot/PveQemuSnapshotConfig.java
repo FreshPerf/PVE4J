@@ -49,7 +49,7 @@ public class PveQemuSnapshotConfig {
      * <p>{@code memory} is a property string whose default key is {@code current},
      * so both {@code "4096"} and {@code "current=4096"} are valid.
      *
-     * @return the {@code current} memory size, or null if not set
+     * @return the {@code current} memory size, or null if not set (or not a number)
      */
     public Integer getMemory() {
         if (memory == null || memory.isBlank()) {
@@ -57,11 +57,14 @@ public class PveQemuSnapshotConfig {
         }
         for (String part : memory.split(",")) {
             String token = part.trim();
-            if (token.startsWith("current=")) {
-                return Integer.parseInt(token.substring("current=".length()).trim());
-            }
-            if (!token.contains("=")) {
-                return Integer.parseInt(token);
+            String value = token.startsWith("current=") ? token.substring("current=".length()).trim()
+                    : !token.contains("=") ? token : null;
+            if (value != null) {
+                try {
+                    return Integer.parseInt(value);
+                } catch (NumberFormatException e) {
+                    return null;
+                }
             }
         }
         return null;

@@ -84,7 +84,7 @@ class PveQemuConfigTest {
     }
 
     @Test
-    @DisplayName("Should read memory returned as a JSON number (older PVE versions)")
+    @DisplayName("Should read memory returned as a JSON number (older PVE versions) and ignore malformed values")
     void shouldReadMemoryAsNumber() {
         JsonObject json = PveJson.fixtureObject("qemu/config-template-9001.json");
         json.addProperty("memory", 2048);
@@ -92,5 +92,8 @@ class PveQemuConfigTest {
         PveQemuConfig config = PveJson.parse(json, PveQemuConfig.class);
 
         assertThat(config.getMemory()).isEqualTo(2048);
+
+        json.addProperty("memory", "current=abc");
+        assertThat(PveJson.parse(json, PveQemuConfig.class).getMemory()).isZero();
     }
 }
