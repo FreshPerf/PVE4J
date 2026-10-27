@@ -31,8 +31,9 @@ public class PvePoolMember {
     @SerializedName("uptime")
     private Long uptime;
 
+    // A number, not an integer: containers report their cpulimit, which can be fractional.
     @SerializedName("maxcpu")
-    private Integer maxcpu;
+    private Double maxcpu;
 
     @SerializedName("maxmem")
     private Long maxmem;
@@ -122,11 +123,12 @@ public class PvePoolMember {
     }
 
     /**
-     * Gets the maximum CPU cores.
+     * Gets the maximum number of CPUs; fractional for containers limited by a fractional
+     * {@code cpulimit}.
      *
      * @return the max CPU
      */
-    public Integer getMaxcpu() {
+    public Double getMaxcpu() {
         return maxcpu;
     }
 

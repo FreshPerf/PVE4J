@@ -6,7 +6,9 @@ package fr.freshperf.pve4j.entities.cluster.resources;
 public class PveClusterResources {
 
     private String type, id, node, status;
-    private int vmid, maxcpu;
+    private int vmid;
+    // A number, not an integer: containers report their cpulimit, which can be fractional.
+    private double maxcpu;
     private long maxmem, mem, maxdisk, disk, uptime;
     private float cpu;
     private String name, pool, hastate, tags, lock;
@@ -36,7 +38,13 @@ public class PveClusterResources {
         return vmid;
     }
 
-    public int getMaxcpu() {
+    /**
+     * Gets the number of available CPUs.
+     *
+     * @return the number of available CPUs (for nodes, VMs and containers); fractional for
+     *         containers limited by a fractional {@code cpulimit}
+     */
+    public double getMaxcpu() {
         return maxcpu;
     }
 

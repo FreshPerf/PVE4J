@@ -6,7 +6,8 @@ package fr.freshperf.pve4j.entities.nodes.node.lxc;
 public class PveLxcStatus {
 
     private Integer vmid;
-    private Integer cpus;
+    // A number, not an integer: falls back to the container's cpulimit, which can be fractional.
+    private Double cpus;
     private Long maxdisk;
     private Long maxmem;
     private Long mem;
@@ -31,7 +32,13 @@ public class PveLxcStatus {
         return vmid;
     }
 
-    public Integer getCpus() {
+    /**
+     * Gets the maximum usable CPUs.
+     *
+     * @return the maximum usable CPUs: the container's {@code cores}, or its (possibly
+     *         fractional) {@code cpulimit} when no cores are set, or the host CPU count
+     */
+    public Double getCpus() {
         return cpus;
     }
 
