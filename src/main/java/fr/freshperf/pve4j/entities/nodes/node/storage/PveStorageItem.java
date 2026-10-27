@@ -11,11 +11,15 @@ import fr.freshperf.pve4j.util.ParamsHelpers;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Facade for managing a specific storage.
  */
 public record PveStorageItem(ProxmoxHttpClient client, String nodeName, String storageId) {
+
+    private static final Set<String> ALLOWED_RRD_TIMEFRAMES = Set.of("hour", "day", "week", "month", "year");
+    private static final Set<String> ALLOWED_RRD_CF = Set.of("AVERAGE", "MAX");
 
     /**
      * Gets the storage status.
@@ -178,15 +182,38 @@ public record PveStorageItem(ProxmoxHttpClient client, String nodeName, String s
     }
 
     /**
-     * Gets RRD statistics (graph data).
+     * Gets the RRD statistics (usage over time) of this storage.
      *
-     * @return a request returning the RRD data
+     * @param timeframe the timeframe ("hour", "day", "week", "month" or "year")
+     * @return a request returning the RRD data points
+     * @throws IllegalArgumentException if timeframe is invalid
      */
-    public ProxmoxRequest<PveStorageRrd> getRrd() {
-        return new ProxmoxRequest<>(() -> 
-            client.get("nodes/" + nodeName + "/storage/" + storageId + "/rrd")
-                .execute(PveStorageRrd.class)
-        );
+    public ProxmoxRequest<List<PveStorageRrdDataPoint>> getRrdData(String timeframe) {
+        return getRrdData(timeframe, null);
+    }
+
+    /**
+     * Gets the RRD statistics (usage over time) of this storage.
+     *
+     * @param timeframe the timeframe ("hour", "day", "week", "month" or "year")
+     * @param cf        the consolidation function ("AVERAGE" or "MAX"), or null for the default
+     * @return a request returning the RRD data points
+     * @throws IllegalArgumentException if timeframe or cf is invalid
+     */
+    public ProxmoxRequest<List<PveStorageRrdDataPoint>> getRrdData(String timeframe, String cf) {
+        if (timeframe == null || !ALLOWED_RRD_TIMEFRAMES.contains(timeframe)) {
+            throw new IllegalArgumentException("timeframe must be one of: " + String.join(", ", ALLOWED_RRD_TIMEFRAMES));
+        }
+        if (cf != null && !ALLOWED_RRD_CF.contains(cf)) {
+            throw new IllegalArgumentException("cf must be one of: " + String.join(", ", ALLOWED_RRD_CF));
+        }
+        return new ProxmoxRequest<>(() -> {
+            Map<String, Object> params = new HashMap<>();
+            params.put("timeframe", timeframe);
+            ParamsHelpers.put(params, "cf", cf);
+            return client.get("nodes/" + nodeName + "/storage/" + storageId + "/rrddata")
+                .params(params)
+                .executeList(new TypeToken<List<PveStorageRrdDataPoint>>(){});
+        });
     }
 }
-

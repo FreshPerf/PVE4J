@@ -344,6 +344,7 @@ The library's functionality is structured hierarchically, starting from the main
       - `.get(storage)` - Access a specific storage
         - `.getBackups(vmid)`, `.getVolume(volid)`, `.updateVolumeAttributes()`, `.deleteVolume(volid)`
         - `.getPruneBackups(options)`, `.pruneBackups(options)` - Retention management
+        - `.getRrdData(timeframe)` - Usage statistics over time
     - `.getVzdump()` - Node-level backups
       - `.backup(options)`, `.getDefaults()`, `.extractConfig(volid)`
 - `proxmox.getPools()` - Manage resource pools

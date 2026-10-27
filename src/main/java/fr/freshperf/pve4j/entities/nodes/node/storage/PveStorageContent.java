@@ -1,5 +1,7 @@
 package fr.freshperf.pve4j.entities.nodes.node.storage;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Represents content stored on a storage (disk images, ISOs, etc.).
  */
@@ -9,7 +11,10 @@ public class PveStorageContent {
     private long size, used;
     private int vmid;
     private String parent, notes;
-    private boolean encrypted, isProtected;
+    // The API returns the key fingerprint, or '1' if encrypted without a known fingerprint.
+    private String encrypted;
+    @SerializedName("protected")
+    private boolean isProtected;
     private long ctime;
 
     public String getVolid() {
@@ -44,7 +49,23 @@ public class PveStorageContent {
         return notes;
     }
 
+    /**
+     * Checks whether the backup is encrypted.
+     *
+     * @return whether the backup is encrypted (only reported by Proxmox Backup Server storages)
+     */
     public boolean isEncrypted() {
+        return encrypted != null && !encrypted.isEmpty() && !"0".equals(encrypted);
+    }
+
+    /**
+     * Gets the encryption state of the backup.
+     *
+     * @return the encryption key fingerprint, "1" if the backup is encrypted but the fingerprint
+     *         is unknown, or null if the backup is not encrypted (only reported by Proxmox
+     *         Backup Server storages)
+     */
+    public String getEncrypted() {
         return encrypted;
     }
 
