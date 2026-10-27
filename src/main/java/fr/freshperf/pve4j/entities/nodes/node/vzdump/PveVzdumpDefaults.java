@@ -1,6 +1,7 @@
 package fr.freshperf.pve4j.entities.nodes.node.vzdump;
 
 import com.google.gson.annotations.SerializedName;
+import fr.freshperf.pve4j.entities.cluster.backup.PveBackupJob;
 
 /**
  * Represents the currently configured vzdump defaults for a node, as returned by
@@ -28,8 +29,8 @@ public class PveVzdumpDefaults {
     private String notesTemplate;
     @SerializedName("prune-backups")
     private String pruneBackups;
-    private String performance;
-    private String fleecing;
+    private PveBackupJob.Performance performance;
+    private PveBackupJob.Fleecing fleecing;
     private String dumpdir;
     private String mailnotification;
     private String mailto;
@@ -111,13 +112,13 @@ public class PveVzdumpDefaults {
         return pruneBackups;
     }
 
-    /** @return the performance-related settings string, or null. */
-    public String getPerformance() {
+    /** @return the performance-related settings (same format as a backup job's), or null. */
+    public PveBackupJob.Performance getPerformance() {
         return performance;
     }
 
-    /** @return the backup fleecing options string, or null. */
-    public String getFleecing() {
+    /** @return the backup fleecing settings (same format as a backup job's), or null. */
+    public PveBackupJob.Fleecing getFleecing() {
         return fleecing;
     }
 

@@ -39,8 +39,8 @@ public class PveBackupJob {
     @SerializedName("notes-template")
     private String notesTemplate;
     @SerializedName("prune-backups")
-    private String pruneBackups;
-    private String performance;
+    private PruneBackups pruneBackups;
+    private Performance performance;
     private Fleecing fleecing;
     private String mailto;
     private String mailnotification;
@@ -185,13 +185,13 @@ public class PveBackupJob {
         return notesTemplate;
     }
 
-    /** @return the prune-backups retention options string, or null. */
-    public String getPruneBackups() {
+    /** @return the prune-backups retention options, or null. */
+    public PruneBackups getPruneBackups() {
         return pruneBackups;
     }
 
-    /** @return the performance-related settings string, or null. */
-    public String getPerformance() {
+    /** @return the performance-related settings, or null. */
+    public Performance getPerformance() {
         return performance;
     }
 
@@ -286,6 +286,142 @@ public class PveBackupJob {
         @Override
         public String toString() {
             return "Fleecing{enabled=" + enabled + ", storage='" + storage + '\'' + '}';
+        }
+    }
+
+    /**
+     * Retention options of a job ({@code prune-backups}). Unset options are null.
+     */
+    public static class PruneBackups {
+        @SerializedName("keep-all")
+        private Boolean keepAll;
+        @SerializedName("keep-last")
+        private Integer keepLast;
+        @SerializedName("keep-hourly")
+        private Integer keepHourly;
+        @SerializedName("keep-daily")
+        private Integer keepDaily;
+        @SerializedName("keep-weekly")
+        private Integer keepWeekly;
+        @SerializedName("keep-monthly")
+        private Integer keepMonthly;
+        @SerializedName("keep-yearly")
+        private Integer keepYearly;
+
+        /**
+         * Creates an empty instance; instances are normally read from the API.
+         */
+        public PruneBackups() {
+        }
+
+        /**
+         * Returns whether all backups are kept, or null.
+         *
+         * @return whether all backups are kept, or null
+         */
+        public Boolean getKeepAll() {
+            return keepAll;
+        }
+
+        /**
+         * Returns the number of last backups to keep, or null.
+         *
+         * @return the number of last backups to keep, or null
+         */
+        public Integer getKeepLast() {
+            return keepLast;
+        }
+
+        /**
+         * Returns the number of hourly backups to keep, or null.
+         *
+         * @return the number of hourly backups to keep, or null
+         */
+        public Integer getKeepHourly() {
+            return keepHourly;
+        }
+
+        /**
+         * Returns the number of daily backups to keep, or null.
+         *
+         * @return the number of daily backups to keep, or null
+         */
+        public Integer getKeepDaily() {
+            return keepDaily;
+        }
+
+        /**
+         * Returns the number of weekly backups to keep, or null.
+         *
+         * @return the number of weekly backups to keep, or null
+         */
+        public Integer getKeepWeekly() {
+            return keepWeekly;
+        }
+
+        /**
+         * Returns the number of monthly backups to keep, or null.
+         *
+         * @return the number of monthly backups to keep, or null
+         */
+        public Integer getKeepMonthly() {
+            return keepMonthly;
+        }
+
+        /**
+         * Returns the number of yearly backups to keep, or null.
+         *
+         * @return the number of yearly backups to keep, or null
+         */
+        public Integer getKeepYearly() {
+            return keepYearly;
+        }
+
+        @Override
+        public String toString() {
+            return "PruneBackups{keepAll=" + keepAll + ", keepLast=" + keepLast +
+                    ", keepHourly=" + keepHourly + ", keepDaily=" + keepDaily +
+                    ", keepWeekly=" + keepWeekly + ", keepMonthly=" + keepMonthly +
+                    ", keepYearly=" + keepYearly + '}';
+        }
+    }
+
+    /**
+     * Performance-related settings of a job ({@code performance}). Unset options are null.
+     */
+    public static class Performance {
+        @SerializedName("max-workers")
+        private Integer maxWorkers;
+        @SerializedName("pbs-entries-max")
+        private Integer pbsEntriesMax;
+
+        /**
+         * Creates an empty instance; instances are normally read from the API.
+         */
+        public Performance() {
+        }
+
+        /**
+         * Returns the maximum number of IO workers for VM backups, or null.
+         *
+         * @return the maximum number of IO workers for VM backups, or null
+         */
+        public Integer getMaxWorkers() {
+            return maxWorkers;
+        }
+
+        /**
+         * Returns the maximum number of in-memory entries for container backups to PBS, or null.
+         *
+         * @return the maximum number of in-memory entries for container backups to PBS, or null
+         */
+        public Integer getPbsEntriesMax() {
+            return pbsEntriesMax;
+        }
+
+        @Override
+        public String toString() {
+            return "Performance{maxWorkers=" + maxWorkers + ", pbsEntriesMax=" + pbsEntriesMax + '}';
         }
     }
 }
