@@ -24,13 +24,10 @@ public class PveLxcConfigUpdateOptions implements ParamsConvertible {
     private String nameserver;
     private Boolean onboot;
     private String ostype;
-    private String password;
-    private String pool;
     private Boolean protection;
     private String revert;
     private String rootfs;
     private String searchdomain;
-    private String sshPublicKeys;
     private String startup;
     private Integer swap;
     private String tags;
@@ -61,13 +58,10 @@ public class PveLxcConfigUpdateOptions implements ParamsConvertible {
         ParamsHelpers.put(params, "nameserver", nameserver);
         ParamsHelpers.putBool(params, "onboot", onboot);
         ParamsHelpers.put(params, "ostype", ostype);
-        ParamsHelpers.put(params, "password", password);
-        ParamsHelpers.put(params, "pool", pool);
         ParamsHelpers.putBool(params, "protection", protection);
         ParamsHelpers.put(params, "revert", revert);
         ParamsHelpers.put(params, "rootfs", rootfs);
         ParamsHelpers.put(params, "searchdomain", searchdomain);
-        ParamsHelpers.put(params, "ssh-public-keys", sshPublicKeys);
         ParamsHelpers.put(params, "startup", startup);
         ParamsHelpers.putInt(params, "swap", swap);
         ParamsHelpers.put(params, "tags", tags);
@@ -100,13 +94,10 @@ public class PveLxcConfigUpdateOptions implements ParamsConvertible {
     public PveLxcConfigUpdateOptions nameserver(String nameserver) { this.nameserver = nameserver; return this; }
     public PveLxcConfigUpdateOptions onboot(Boolean onboot) { this.onboot = onboot; return this; }
     public PveLxcConfigUpdateOptions ostype(String ostype) { this.ostype = ostype; return this; }
-    public PveLxcConfigUpdateOptions password(String password) { this.password = password; return this; }
-    public PveLxcConfigUpdateOptions pool(String pool) { this.pool = pool; return this; }
     public PveLxcConfigUpdateOptions protection(Boolean protection) { this.protection = protection; return this; }
     public PveLxcConfigUpdateOptions revert(String revert) { this.revert = revert; return this; }
     public PveLxcConfigUpdateOptions rootfs(String rootfs) { this.rootfs = rootfs; return this; }
     public PveLxcConfigUpdateOptions searchdomain(String searchdomain) { this.searchdomain = searchdomain; return this; }
-    public PveLxcConfigUpdateOptions sshPublicKeys(String sshPublicKeys) { this.sshPublicKeys = sshPublicKeys; return this; }
     public PveLxcConfigUpdateOptions startup(String startup) { this.startup = startup; return this; }
     public PveLxcConfigUpdateOptions swap(Integer swap) { this.swap = swap; return this; }
     public PveLxcConfigUpdateOptions tags(String tags) { this.tags = tags; return this; }
