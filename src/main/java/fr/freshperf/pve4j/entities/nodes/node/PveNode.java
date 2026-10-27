@@ -73,6 +73,17 @@ public class PveNode {
     }
 
     /**
+     * Gets the node network statistics.
+     *
+     * @return a list of network interface statistics for all vms on this node
+     */
+    public ProxmoxRequest<List<PveNodeNetstat>> getNetstat() {
+        return new ProxmoxRequest<>(() ->
+            client.get("nodes/" + nodeName + "/netstat").executeList(new TypeToken<List<PveNodeNetstat>>(){})
+        );
+    }
+
+    /**
      * Gets the QEMU VM management interface for this node.
      *
      * @return the QEMU API facade
