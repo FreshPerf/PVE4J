@@ -43,8 +43,8 @@ public class ProxmoxRequest<T> {
      */
     public static final Duration DEFAULT_TASK_TIMEOUT = Duration.ofMinutes(30);
 
-    private static ProxmoxThreadManager defaultThreadManager;
-    private static ProxmoxAsyncTaskManager defaultAsyncTaskManager;
+    private static volatile ProxmoxThreadManager defaultThreadManager;
+    private static volatile ProxmoxAsyncTaskManager defaultAsyncTaskManager;
 
     static {
         // Initialize default thread managers
@@ -167,12 +167,12 @@ public class ProxmoxRequest<T> {
      * quickly, the first checks happen at 1/8, 1/4 and 1/2 of the interval, then
      * at every multiple of it.
      *
-     * @param milliseconds the interval in milliseconds
+     * @param milliseconds the interval in milliseconds (at least 1)
      * @return this instance for method chaining
+     * @throws IllegalArgumentException if the interval is shorter than 1 ms
      */
     public ProxmoxRequest<T> taskCheckDelay(long milliseconds) {
-        this.taskCheckDelay = Duration.ofMillis(Math.max(0, milliseconds));
-        return this;
+        return taskCheckDelay(Duration.ofMillis(milliseconds));
     }
 
     /**
@@ -180,11 +180,12 @@ public class ProxmoxRequest<T> {
      * quickly, the first checks happen at 1/8, 1/4 and 1/2 of the interval, then
      * at every multiple of it.
      *
-     * @param duration the interval duration
+     * @param duration the interval duration (at least 1 ms)
      * @return this instance for method chaining
+     * @throws IllegalArgumentException if the interval is null or shorter than 1 ms
      */
     public ProxmoxRequest<T> taskCheckDelay(Duration duration) {
-        this.taskCheckDelay = duration != null ? duration : Duration.ofMillis(0);
+        this.taskCheckDelay = ProxmoxAsyncTaskManager.requireValidCheckInterval(duration);
         return this;
     }
 
@@ -253,11 +254,12 @@ public class ProxmoxRequest<T> {
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
-     * @param checkDelayMs the interval between status checks in milliseconds (the first
-     *                     checks happen sooner, see {@link #taskCheckDelay(Duration)})
+     * @param checkDelayMs the interval between status checks in milliseconds (at least 1;
+     *                     the first checks happen sooner, see {@link #taskCheckDelay(Duration)})
      * @return the completed task
      * @throws ProxmoxAPIError if the task fails or times out
      * @throws InterruptedException if the thread is interrupted
+     * @throws IllegalArgumentException if the interval is shorter than 1 ms
      */
     public static PveTask waitForCompletion(Proxmox proxmox, PveTask task, long checkDelayMs) throws ProxmoxAPIError, InterruptedException {
         return waitForCompletion(proxmox, task, Duration.ofMillis(checkDelayMs), DEFAULT_TASK_TIMEOUT);
@@ -268,15 +270,17 @@ public class ProxmoxRequest<T> {
      *
      * @param proxmox the Proxmox instance
      * @param task the task to wait for
-     * @param checkDelay the interval between status checks (the first checks happen
-     *                   sooner, see {@link #taskCheckDelay(Duration)})
+     * @param checkDelay the interval between status checks (at least 1 ms; the first
+     *                   checks happen sooner, see {@link #taskCheckDelay(Duration)})
      * @param timeout the maximum timeout (null for no timeout)
      * @return the completed task
      * @throws ProxmoxAPIError if the task fails or times out
      * @throws InterruptedException if the thread is interrupted
+     * @throws IllegalArgumentException if the interval is null or shorter than 1 ms
      */
     public static PveTask waitForCompletion(Proxmox proxmox, PveTask task, Duration checkDelay, Duration timeout)
             throws ProxmoxAPIError, InterruptedException {
+        ProxmoxAsyncTaskManager.requireValidCheckInterval(checkDelay);
         if (task == null || !hasValidUpid(task)) {
             return task;
         }

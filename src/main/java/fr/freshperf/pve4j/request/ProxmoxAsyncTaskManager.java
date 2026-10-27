@@ -68,6 +68,7 @@ public class ProxmoxAsyncTaskManager {
      *                      1/8, 1/4 and 1/2 of it to notice short tasks quickly)
      * @param timeout the maximum timeout (null for no timeout)
      * @return a CompletableFuture containing the final status
+     * @throws IllegalArgumentException if the check interval is null or shorter than 1 ms
      */
     public CompletableFuture<PveTaskStatus> waitForTaskAsync(
             Proxmox proxmox,
@@ -75,6 +76,7 @@ public class ProxmoxAsyncTaskManager {
             Duration checkInterval,
             Duration timeout) {
 
+        requireValidCheckInterval(checkInterval);
         if (task == null || !hasValidUpid(task)) {
             return CompletableFuture.completedFuture(null);
         }
@@ -107,6 +109,7 @@ public class ProxmoxAsyncTaskManager {
      * @param timeout the maximum timeout (null for no timeout)
      * @param callback the callback to execute on completion
      * @return a CompletableFuture for task control
+     * @throws IllegalArgumentException if the check interval is null or shorter than 1 ms
      */
     public CompletableFuture<Void> waitForTaskWithCallback(
             Proxmox proxmox,
@@ -185,6 +188,17 @@ public class ProxmoxAsyncTaskManager {
             Thread.currentThread().interrupt();
             throw new CompletionException("Task polling interrupted", e);
         }
+    }
+
+    /**
+     * Checks that a task check interval is at least 1 ms: a shorter one would make
+     * the status checks run in a tight loop against Proxmox.
+     */
+    static Duration requireValidCheckInterval(Duration checkInterval) {
+        if (checkInterval == null || checkInterval.toMillis() < 1) {
+            throw new IllegalArgumentException("Task check interval must be at least 1 ms, got: " + checkInterval);
+        }
+        return checkInterval;
     }
 
     /**

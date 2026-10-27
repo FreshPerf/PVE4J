@@ -1,9 +1,11 @@
 package fr.freshperf.pve4j.request;
 
+import fr.freshperf.pve4j.entities.PveTask;
 import fr.freshperf.pve4j.throwable.ProxmoxAPIError;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -251,6 +253,20 @@ class ProxmoxRequestTest {
         ProxmoxRequest<String> requestWithDelay = request.taskCheckDelay(500);
 
         assertThat(requestWithDelay).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Should reject a task check delay shorter than 1 ms")
+    void shouldRejectTaskCheckDelayShorterThanOneMillisecond() {
+        ProxmoxRequest<String> request = new ProxmoxRequest<>(() -> "Success");
+
+        // A delay under 1 ms would poll Proxmox in a tight loop, a negative one made Thread.sleep fail
+        assertThatThrownBy(() -> request.taskCheckDelay(0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> request.taskCheckDelay(-1)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> request.taskCheckDelay((Duration) null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> request.taskCheckDelay(Duration.ofNanos(500_000))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ProxmoxRequest.waitForCompletion(null, new PveTask("UPID:node1:0:0:0:qmstart:100:root@pam:"), 0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
 
