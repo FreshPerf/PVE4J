@@ -1,5 +1,6 @@
 package fr.freshperf.pve4j.entities.pools;
 
+import com.google.gson.reflect.TypeToken;
 import fr.freshperf.pve4j.request.ProxmoxHttpClient;
 import fr.freshperf.pve4j.request.ProxmoxRequest;
 
@@ -24,30 +25,46 @@ public class PvePoolItem {
         this.poolid = poolid;
     }
 
+    /*
+     * Nested pool IDs ("parent/child") cannot be used as a path segment: pveproxy unescapes the
+     * path before routing, so they only work with the /pools endpoints taking a poolid parameter
+     * (PVE 8.1+). Flat IDs keep using the /pools/{poolid} endpoints, which older versions require.
+     */
+    private boolean isNested() {
+        return poolid.contains("/");
+    }
+
     /**
      * Gets detailed pool information including members.
      *
      * @return a request returning the pool details
      */
     public ProxmoxRequest<PvePoolDetails> getDetails() {
-        return new ProxmoxRequest<>(() ->
-            client.get("pools/" + poolid)
-                .execute(PvePoolDetails.class)
-        );
+        return getDetails(null);
     }
 
     /**
      * Gets detailed pool information with specific member type.
      *
-     * @param type the member type to filter ("qemu", "lxc", "storage")
+     * @param type the member type to filter ("qemu", "lxc", "storage"), or null for all
      * @return a request returning the pool details
      */
     public ProxmoxRequest<PvePoolDetails> getDetails(String type) {
-        return new ProxmoxRequest<>(() ->
-            client.get("pools/" + poolid)
-                .param("type", type)
-                .execute(PvePoolDetails.class)
-        );
+        return new ProxmoxRequest<>(() -> {
+            if (isNested()) {
+                var builder = client.get("pools").param("poolid", poolid);
+                if (type != null) {
+                    builder.param("type", type);
+                }
+                List<PvePoolDetails> pools = builder.executeList(new TypeToken<List<PvePoolDetails>>() {});
+                return pools == null || pools.isEmpty() ? null : pools.get(0);
+            }
+            var builder = client.get("pools/" + poolid);
+            if (type != null) {
+                builder.param("type", type);
+            }
+            return builder.execute(PvePoolDetails.class);
+        });
     }
 
     /**
@@ -62,8 +79,10 @@ public class PvePoolItem {
             throw new IllegalArgumentException("options cannot be null");
         }
         return new ProxmoxRequest<>(() -> {
-            client.put("pools/" + poolid)
-                .params(options.toParams())
+            var builder = isNested()
+                ? client.put("pools").param("poolid", poolid)
+                : client.put("pools/" + poolid);
+            builder.params(options.toParams())
                 .execute();
             return null;
         });
@@ -116,8 +135,10 @@ public class PvePoolItem {
      */
     public ProxmoxRequest<Void> delete() {
         return new ProxmoxRequest<>(() -> {
-            client.delete("pools/" + poolid)
-                .execute();
+            var builder = isNested()
+                ? client.delete("pools").param("poolid", poolid)
+                : client.delete("pools/" + poolid);
+            builder.execute();
             return null;
         });
     }
