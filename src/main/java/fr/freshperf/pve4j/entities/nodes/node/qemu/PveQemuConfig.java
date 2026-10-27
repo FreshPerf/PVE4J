@@ -1,10 +1,29 @@
 package fr.freshperf.pve4j.entities.nodes.node.qemu;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * Represents the configuration of a QEMU VM.
+ * <p>Only the most common keys have dedicated getters; every key returned by the API
+ * (including indexed devices beyond the modelled ones) is available through
+ * {@link #getProperties()} and {@link #getIndexed(String)}.
  */
+@JsonAdapter(PveQemuConfig.PropertiesCapturingAdapterFactory.class)
 public class PveQemuConfig {
 
     // Identification / metadata
@@ -20,8 +39,9 @@ public class PveQemuConfig {
     private double cpulimit;
     private int cpuunits, shares;
 
-    // Memory
-    private int memory, balloon;
+    // Memory (property string, e.g. "4096" or "current=4096")
+    private String memory;
+    private int balloon;
     private String hugepages;
     private int keephugepages;
 
@@ -67,7 +87,10 @@ public class PveQemuConfig {
 
     // Other options
     private String hotplug, hookscript, meta, watchdog;
-    private String[] args;
+    private String args;
+
+    // All raw keys as returned by the API (filled by PropertiesCapturingAdapterFactory)
+    private transient Map<String, String> properties = Collections.emptyMap();
 
     public String getName() {
         return name;
@@ -165,8 +188,27 @@ public class PveQemuConfig {
         return shares;
     }
 
+    /**
+     * Returns the amount of RAM in MiB.
+     * <p>The API returns {@code memory} as a property string whose default key is
+     * {@code current}, so both {@code "4096"} and {@code "current=4096"} are valid.
+     *
+     * @return the {@code current} memory in MiB, or 0 if not set
+     */
     public int getMemory() {
-        return memory;
+        if (memory == null || memory.isBlank()) {
+            return 0;
+        }
+        for (String part : memory.split(",")) {
+            String token = part.trim();
+            if (token.startsWith("current=")) {
+                return Integer.parseInt(token.substring("current=".length()).trim());
+            }
+            if (!token.contains("=")) {
+                return Integer.parseInt(token);
+            }
+        }
+        return 0;
     }
 
     public int getBalloon() {
@@ -497,8 +539,91 @@ public class PveQemuConfig {
         return watchdog;
     }
 
-    public String[] getArgs() {
+    /**
+     * Returns the arbitrary arguments passed to kvm.
+     * <p>The API returns {@code args} as a single string (e.g. {@code "-cpu host,+kvm_pv_unhalt"}).
+     *
+     * @return the raw kvm arguments, or null if not set
+     */
+    public String getArgs() {
         return args;
+    }
+
+    /**
+     * Returns every configuration key exactly as returned by the API, values as strings.
+     * <p>Use it for keys without a dedicated getter, such as {@code serial0},
+     * {@code unused5}, {@code scsi12}, {@code numa0} or {@code ipconfig3}.
+     *
+     * @return an unmodifiable map of config key to raw value (empty if not deserialized from JSON)
+     */
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    /**
+     * Returns all indexed keys of a device family, keyed by index.
+     * <p>For example {@code getIndexed("unused")} returns {@code {0=..., 5=...}} for
+     * {@code unused0} and {@code unused5}. The prefix must match exactly, so {@code "virtio"}
+     * does not include {@code virtiofs0}.
+     *
+     * @param prefix the key prefix (e.g. "scsi", "virtio", "net", "unused", "serial", "ipconfig")
+     * @return a sorted, unmodifiable map of index to raw value
+     */
+    public SortedMap<Integer, String> getIndexed(String prefix) {
+        SortedMap<Integer, String> result = new TreeMap<>();
+        if (prefix == null || prefix.isEmpty()) {
+            return Collections.unmodifiableSortedMap(result);
+        }
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
+            String key = entry.getKey();
+            if (key.length() > prefix.length() && key.startsWith(prefix)) {
+                String index = key.substring(prefix.length());
+                if (index.chars().allMatch(Character::isDigit) && index.length() <= 3) {
+                    result.put(Integer.parseInt(index), entry.getValue());
+                }
+            }
+        }
+        return Collections.unmodifiableSortedMap(result);
+    }
+
+    /**
+     * Keeps every raw key of the JSON object in {@link #properties}, so that keys
+     * without a dedicated field are not silently dropped.
+     */
+    static final class PropertiesCapturingAdapterFactory implements TypeAdapterFactory {
+        @Override
+        public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
+            if (type.getRawType() != PveQemuConfig.class) {
+                return null;
+            }
+            TypeAdapter<T> delegate = gson.getDelegateAdapter(this, type);
+            TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+            return new TypeAdapter<T>() {
+                @Override
+                public void write(JsonWriter out, T value) throws IOException {
+                    delegate.write(out, value);
+                }
+
+                @Override
+                public T read(JsonReader in) throws IOException {
+                    JsonElement tree = elementAdapter.read(in);
+                    T value = delegate.fromJsonTree(tree);
+                    if (value != null && tree.isJsonObject()) {
+                        Map<String, String> raw = new LinkedHashMap<>();
+                        for (Map.Entry<String, JsonElement> entry : tree.getAsJsonObject().entrySet()) {
+                            JsonElement element = entry.getValue();
+                            if (element.isJsonPrimitive()) {
+                                raw.put(entry.getKey(), element.getAsString());
+                            } else if (!element.isJsonNull()) {
+                                raw.put(entry.getKey(), element.toString());
+                            }
+                        }
+                        ((PveQemuConfig) value).properties = Collections.unmodifiableMap(raw);
+                    }
+                    return value;
+                }
+            };
+        }
     }
 
     @Override
@@ -508,7 +633,7 @@ public class PveQemuConfig {
                 ", ostype='" + ostype + '\'' +
                 ", sockets=" + sockets +
                 ", cores=" + cores +
-                ", memory=" + memory +
+                ", memory='" + memory + '\'' +
                 ", boot='" + boot + '\'' +
                 ", machine='" + machine + '\'' +
                 '}';

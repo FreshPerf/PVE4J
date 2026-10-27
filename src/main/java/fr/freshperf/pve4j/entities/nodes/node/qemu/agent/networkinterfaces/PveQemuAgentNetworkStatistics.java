@@ -6,31 +6,31 @@ import com.google.gson.annotations.SerializedName;
  * Represents network statistics for a guest agent network interface.
  */
 public class PveQemuAgentNetworkStatistics {
-    @SerializedName("rx-Errs")
-    private int rxErrs;
-    @SerializedName("tx-Errs")
-    private int txErrs;
-    @SerializedName("rx-Dropped")
-    private int rxDropped;
-    @SerializedName("tx-Dropped")
-    private int txDropped;
-    @SerializedName("rx-Packets")
-    private int rxPackets;
-    @SerializedName("tx-Packets")
-    private int txPackets;
-    @SerializedName("rx-Bytes")
-    private int rxBytes;
-    @SerializedName("tx-Bytes")
-    private int txBytes;
+    @SerializedName("rx-errs")
+    private long rxErrs;
+    @SerializedName("tx-errs")
+    private long txErrs;
+    @SerializedName("rx-dropped")
+    private long rxDropped;
+    @SerializedName("tx-dropped")
+    private long txDropped;
+    @SerializedName("rx-packets")
+    private long rxPackets;
+    @SerializedName("tx-packets")
+    private long txPackets;
+    @SerializedName("rx-bytes")
+    private long rxBytes;
+    @SerializedName("tx-bytes")
+    private long txBytes;
 
-    public int getRxErrs() { return rxErrs; }
-    public int getTxErrs() { return txErrs; }
-    public int getRxDropped() { return rxDropped; }
-    public int getTxDropped() { return txDropped; }
-    public int getRxPackets() { return rxPackets; }
-    public int getTxPackets() { return txPackets; }
-    public int getRxBytes() { return rxBytes; }
-    public int getTxBytes() { return txBytes; }
+    public long getRxErrs() { return rxErrs; }
+    public long getTxErrs() { return txErrs; }
+    public long getRxDropped() { return rxDropped; }
+    public long getTxDropped() { return txDropped; }
+    public long getRxPackets() { return rxPackets; }
+    public long getTxPackets() { return txPackets; }
+    public long getRxBytes() { return rxBytes; }
+    public long getTxBytes() { return txBytes; }
 
     @Override
     public String toString() {

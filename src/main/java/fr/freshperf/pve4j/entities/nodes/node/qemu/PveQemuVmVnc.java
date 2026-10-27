@@ -42,6 +42,23 @@ public class PveQemuVmVnc {
     }
 
     /**
+     * Creates a VNC proxy session, optionally prepared for a websocket upgrade.
+     * <p>{@code websocket=true} is required to use {@link #getVncWebsocketUrl(PveQemuVmVncProxy)}
+     * or {@link #openVncWebsocket(PveQemuVmVncProxy)} on a VM whose display is a serial
+     * terminal ({@code vga: serialN}); for other VMs the upgrade is always possible.
+     *
+     * @param websocket true to prepare the proxy for a websocket connection
+     * @return a request returning the VNC proxy details
+     */
+    public ProxmoxRequest<PveQemuVmVncProxy> getVncProxy(boolean websocket) {
+        return new ProxmoxRequest<>(() ->
+                client.post("nodes/" + nodeName + "/qemu/" + vmid + "/vncproxy")
+                        .param("websocket", websocket ? "1" : "0")
+                        .execute(PveQemuVmVncProxy.class)
+        );
+    }
+
+    /**
      * Builds the WebSocket URL for VNC access.
      *
      * @param proxy the VNC proxy details

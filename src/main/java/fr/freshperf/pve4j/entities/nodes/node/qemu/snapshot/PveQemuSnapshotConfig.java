@@ -10,8 +10,9 @@ public class PveQemuSnapshotConfig {
     @SerializedName("description")
     private String description;
 
+    // Property string, e.g. "4096" or "current=4096"
     @SerializedName("memory")
-    private Integer memory;
+    private String memory;
 
     @SerializedName("cores")
     private Integer cores;
@@ -44,12 +45,26 @@ public class PveQemuSnapshotConfig {
     }
 
     /**
-     * Gets the memory size in MB.
+     * Gets the memory size in MiB.
+     * <p>{@code memory} is a property string whose default key is {@code current},
+     * so both {@code "4096"} and {@code "current=4096"} are valid.
      *
-     * @return the memory size
+     * @return the {@code current} memory size, or null if not set
      */
     public Integer getMemory() {
-        return memory;
+        if (memory == null || memory.isBlank()) {
+            return null;
+        }
+        for (String part : memory.split(",")) {
+            String token = part.trim();
+            if (token.startsWith("current=")) {
+                return Integer.parseInt(token.substring("current=".length()).trim());
+            }
+            if (!token.contains("=")) {
+                return Integer.parseInt(token);
+            }
+        }
+        return null;
     }
 
     /**
@@ -119,7 +134,7 @@ public class PveQemuSnapshotConfig {
     public String toString() {
         return "PveQemuSnapshotConfig{" +
                 "description='" + description + '\'' +
-                ", memory=" + memory +
+                ", memory='" + memory + '\'' +
                 ", cores=" + cores +
                 ", sockets=" + sockets +
                 ", name='" + name + '\'' +

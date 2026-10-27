@@ -88,10 +88,11 @@ public class ProxmoxApiBaseUrlBuilder {
      * @param client   the HTTP client
      * @param nodeName the node name
      * @param vmid     the VM ID
-     * @return the WebSocket URL for VNC
+     * @return the WebSocket URL for VNC ({@code wss://} for an https base URL, {@code ws://} for http)
      */
     public static String buildWebsocketUrl(ProxmoxHttpClient client, String nodeName, int vmid) {
         return client.getBaseUrl()
-                .replaceFirst("^https?://", "wss://") + "nodes/"+nodeName+"/qemu/"+vmid+"/vncwebsocket";
+                .replaceFirst("^https://", "wss://")
+                .replaceFirst("^http://", "ws://") + "nodes/"+nodeName+"/qemu/"+vmid+"/vncwebsocket";
     }
 }

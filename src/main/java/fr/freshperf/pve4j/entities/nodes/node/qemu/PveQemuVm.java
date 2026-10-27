@@ -10,6 +10,7 @@ import fr.freshperf.pve4j.request.ProxmoxRequest;
 import fr.freshperf.pve4j.request.TaskResponseTransformer;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -18,6 +19,7 @@ import java.util.Set;
 public class PveQemuVm {
 
     private static final Set<String> ALLOWED_RRD_TIMEFRAMES = Set.of("hour", "day", "week", "month", "year");
+    private static final List<String> ASYNC_ONLY_CONFIG_PARAMS = List.of("background_delay", "import-working-storage");
 
     private final ProxmoxHttpClient client;
     private final String nodeName;
@@ -396,18 +398,27 @@ public class PveQemuVm {
 
     /**
      * Updates VM configuration synchronously (PUT).
+     * <p>The PUT endpoint does not accept {@code background_delay} nor
+     * {@code import-working-storage}; use {@link #updateConfig(PveQemuConfigUpdateOptions)} for those.
+     * The endpoint returns no task, so the returned task has a null UPID.
      *
      * @param options the configuration options to update
      * @return a request returning the task for tracking
-     * @throws IllegalArgumentException if options is null
+     * @throws IllegalArgumentException if options is null or contains a POST-only option
      */
     public ProxmoxRequest<PveTask> updateConfigSync(PveQemuConfigUpdateOptions options) {
         if (options == null) {
             throw new IllegalArgumentException("options cannot be null");
         }
+        Map<String, Object> params = options.toParams();
+        for (String key : ASYNC_ONLY_CONFIG_PARAMS) {
+            if (params.containsKey(key)) {
+                throw new IllegalArgumentException(key + " is only supported by updateConfig (POST), not by updateConfigSync (PUT)");
+            }
+        }
         return new ProxmoxRequest<>(() ->
             client.put("nodes/" + nodeName + "/qemu/" + vmid + "/config")
-                .params(options.toParams())
+                .params(params)
                 .transformer(new TaskResponseTransformer())
                 .execute(PveTask.class)
         );
@@ -459,6 +470,7 @@ public class PveQemuVm {
      * @param online     true for live migration
      * @param targetStorage target storage (null for same storage)
      * @return a request returning the task for tracking
+     * @see #migrate(String, PveQemuMigrateOptions) to migrate a running VM with local disks
      */
     public ProxmoxRequest<PveTask> migrate(String targetNode, boolean online, String targetStorage) {
         if (targetNode == null || targetNode.isBlank()) {
@@ -476,6 +488,28 @@ public class PveQemuVm {
             return builder.transformer(new TaskResponseTransformer())
                 .execute(PveTask.class);
         });
+    }
+
+    /**
+     * Migrates this VM to another node with full migration options.
+     * <p>Live migrating a running VM whose disks are on local storage requires
+     * {@link PveQemuMigrateOptions#withLocalDisks(Boolean) withLocalDisks(true)}.
+     *
+     * @param targetNode the target node name
+     * @param options    migration options or null
+     * @return a request returning the task for tracking
+     * @throws IllegalArgumentException if targetNode is null or blank
+     */
+    public ProxmoxRequest<PveTask> migrate(String targetNode, PveQemuMigrateOptions options) {
+        PveQemuMigrateOptions effectiveOptions = options != null ? options : PveQemuMigrateOptions.builder();
+        Map<String, Object> params = effectiveOptions.toParams(targetNode);
+
+        return new ProxmoxRequest<>(() ->
+            client.post("nodes/" + nodeName + "/qemu/" + vmid + "/migrate")
+                .params(params)
+                .transformer(new TaskResponseTransformer())
+                .execute(PveTask.class)
+        );
     }
 
     /**

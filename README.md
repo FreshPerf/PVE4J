@@ -324,7 +324,7 @@ The library's functionality is structured hierarchically, starting from the main
         - `.cloneVm()`, `.resize()`, `.delete()`
         - `.updateConfig()`, `.getConfig()`, `.getStatus()`
         - `.backup(options)` - Create a backup
-        - `.migrate(targetNode, online, targetStorage)` - Migrate to another node
+        - `.migrate(targetNode, online, targetStorage)`, `.migrate(targetNode, options)` - Migrate to another node
         - `.template()` - Convert to template
         - `.getCloudInit()`, `.getAgent()`, `.getVnc()`, `.getRrdData()`
         - `.getFirewall()` - Manage VM firewall settings (options, log, refs)

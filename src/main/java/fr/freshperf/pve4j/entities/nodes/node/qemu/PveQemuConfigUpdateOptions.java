@@ -59,7 +59,7 @@ public class PveQemuConfigUpdateOptions implements ParamsConvertible {
     private Boolean localtime;
     private String lock;
     private String machine;
-    private String memory;
+    private Integer memory;
     private Double migrateDowntime;
     private Integer migrateSpeed;
     private String name;
@@ -72,7 +72,7 @@ public class PveQemuConfigUpdateOptions implements ParamsConvertible {
     private final Map<Integer, String> parallels = new HashMap<>();
     private Boolean protection;
     private Boolean reboot;
-    private Boolean revert;
+    private String revert;
     private String rng0;
     private final Map<Integer, String> satas = new HashMap<>();
     private final Map<Integer, String> scsis = new HashMap<>();
@@ -158,7 +158,7 @@ public class PveQemuConfigUpdateOptions implements ParamsConvertible {
         ParamsHelpers.putBool(params, "localtime", localtime);
         ParamsHelpers.put(params, "lock", lock);
         ParamsHelpers.put(params, "machine", machine);
-        ParamsHelpers.put(params, "memory", memory);
+        ParamsHelpers.putInt(params, "memory", memory);
         ParamsHelpers.putDouble(params, "migrate_downtime", migrateDowntime);
         ParamsHelpers.putInt(params, "migrate_speed", migrateSpeed);
         ParamsHelpers.put(params, "name", name);
@@ -171,7 +171,7 @@ public class PveQemuConfigUpdateOptions implements ParamsConvertible {
         parallels.forEach((i, v) -> ParamsHelpers.put(params, "parallel" + i, v));
         ParamsHelpers.putBool(params, "protection", protection);
         ParamsHelpers.putBool(params, "reboot", reboot);
-        ParamsHelpers.putBool(params, "revert", revert);
+        ParamsHelpers.put(params, "revert", revert);
         ParamsHelpers.put(params, "rng0", rng0);
         satas.forEach((i, v) -> ParamsHelpers.put(params, "sata" + i, v));
         scsis.forEach((i, v) -> ParamsHelpers.put(params, "scsi" + i, v));
@@ -248,15 +248,7 @@ public class PveQemuConfigUpdateOptions implements ParamsConvertible {
     public PveQemuConfigUpdateOptions localtime(Boolean localtime) { this.localtime = localtime; return this; }
     public PveQemuConfigUpdateOptions lock(String lock) { this.lock = lock; return this; }
     public PveQemuConfigUpdateOptions machine(String machine) { this.machine = machine; return this; }
-
-    @Deprecated(since = "0.1.2")
-    /*
-    *   Deprecated: Please use #memory(int); instead of the confusing String.
-    *
-    * */
-    public PveQemuConfigUpdateOptions memory(String memory) { this.memory = memory; return this; }
-
-    public PveQemuConfigUpdateOptions memory(int memory) { this.memory = String.valueOf(memory); return this; }
+    public PveQemuConfigUpdateOptions memory(Integer memory) { this.memory = memory; return this; }
     public PveQemuConfigUpdateOptions migrateDowntime(Double migrateDowntime) { this.migrateDowntime = migrateDowntime; return this; }
     public PveQemuConfigUpdateOptions migrateSpeed(Integer migrateSpeed) { this.migrateSpeed = migrateSpeed; return this; }
     public PveQemuConfigUpdateOptions name(String name) { this.name = name; return this; }
@@ -269,7 +261,13 @@ public class PveQemuConfigUpdateOptions implements ParamsConvertible {
     public PveQemuConfigUpdateOptions parallel(int index, String parallel) { ParamsHelpers.putIndexed(parallels, index, parallel); return this; }
     public PveQemuConfigUpdateOptions protection(Boolean protection) { this.protection = protection; return this; }
     public PveQemuConfigUpdateOptions reboot(Boolean reboot) { this.reboot = reboot; return this; }
-    public PveQemuConfigUpdateOptions revert(Boolean revert) { this.revert = revert; return this; }
+    /**
+     * Reverts pending changes of the given options.
+     *
+     * @param revert comma-separated list of config keys whose pending change to revert (e.g. "memory,net0")
+     * @return this builder
+     */
+    public PveQemuConfigUpdateOptions revert(String revert) { this.revert = revert; return this; }
     public PveQemuConfigUpdateOptions rng0(String rng0) { this.rng0 = rng0; return this; }
     public PveQemuConfigUpdateOptions sata(int index, String sata) { ParamsHelpers.putIndexed(satas, index, sata); return this; }
     public PveQemuConfigUpdateOptions scsi(int index, String scsi) { ParamsHelpers.putIndexed(scsis, index, scsi); return this; }

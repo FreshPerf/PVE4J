@@ -11,7 +11,6 @@ public class PveQemuStatus {
     private String name, status, qmpstatus, tags, lock, agent;
     private PveQemuHa ha;
     private PveQemuBalloonInfo ballooninfo;
-    private boolean running;
 
     public int getVmid() {
         return vmid;
@@ -97,8 +96,16 @@ public class PveQemuStatus {
         return agent;
     }
 
+    /**
+     * Returns whether the QEMU process of the VM is running.
+     * <p>The API has no {@code running} field; this is derived from {@link #getStatus()}.
+     * A paused or suspended-to-RAM VM still counts as running; use {@link #getQmpstatus()}
+     * to tell those apart.
+     *
+     * @return true if {@code status} is {@code running}
+     */
     public boolean isRunning() {
-        return running;
+        return "running".equals(status);
     }
 
     @Override
@@ -107,7 +114,7 @@ public class PveQemuStatus {
                 "vmid=" + vmid +
                 ", name='" + name + '\'' +
                 ", status='" + status + '\'' +
-                ", running=" + running +
+                ", running=" + isRunning() +
                 ", cpus=" + cpus +
                 ", cpu=" + cpu +
                 ", maxmem=" + maxmem +

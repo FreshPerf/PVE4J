@@ -1,11 +1,13 @@
 package fr.freshperf.pve4j.util;
 
+import fr.freshperf.pve4j.request.ProxmoxHttpClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @DisplayName("ProxmoxApiBaseUrlBuilder Tests")
 class ProxmoxApiBaseUrlBuilderTest {
@@ -106,5 +108,18 @@ class ProxmoxApiBaseUrlBuilderTest {
 
         assertThat(url).isEqualTo("http://test.com:8080/api2/json/");
     }
-}
 
+    @Test
+    @DisplayName("Should build ws:// websocket URL for an http base URL and wss:// for https")
+    void shouldMapHttpSchemeToWebsocketScheme() {
+        ProxmoxHttpClient httpClient = mock(ProxmoxHttpClient.class);
+        when(httpClient.getBaseUrl()).thenReturn("http://pve.internal/api2/json/");
+        ProxmoxHttpClient httpsClient = mock(ProxmoxHttpClient.class);
+        when(httpsClient.getBaseUrl()).thenReturn("https://pve.example.com:8006/api2/json/");
+
+        assertThat(ProxmoxApiBaseUrlBuilder.buildWebsocketUrl(httpClient, "node1", 100))
+            .isEqualTo("ws://pve.internal/api2/json/nodes/node1/qemu/100/vncwebsocket");
+        assertThat(ProxmoxApiBaseUrlBuilder.buildWebsocketUrl(httpsClient, "node1", 100))
+            .isEqualTo("wss://pve.example.com:8006/api2/json/nodes/node1/qemu/100/vncwebsocket");
+    }
+}

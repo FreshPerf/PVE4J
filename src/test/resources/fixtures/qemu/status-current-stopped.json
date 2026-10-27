@@ -1,0 +1,20 @@
+{
+ "agent": 1,
+ "cpu": 0,
+ "cpus": 4,
+ "disk": 0,
+ "ha": {
+  "managed": 0
+ },
+ "maxdisk": 26843545600,
+ "maxmem": 4294967296,
+ "mem": 0,
+ "memhost": 0,
+ "name": "vm100",
+ "netin": 0,
+ "netout": 0,
+ "qmpstatus": "stopped",
+ "status": "stopped",
+ "uptime": 0,
+ "vmid": 100
+}
