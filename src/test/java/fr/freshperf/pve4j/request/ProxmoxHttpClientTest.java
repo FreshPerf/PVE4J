@@ -285,7 +285,7 @@ class ProxmoxHttpClientTest {
     }
 
     @Test
-    @DisplayName("Should keep GET and DELETE parameters in the query string and a JSON body for empty writes")
+    @DisplayName("Should keep GET and DELETE parameters in the query string, a JSON body for empty writes and no PATCH body")
     void shouldKeepEncodingOfOtherRequests() throws Exception {
         routes.put("/api2/json/things", ex -> send(ex, 200, "{\"data\":null}", false));
         ProxmoxHttpClient client = new ProxmoxHttpClient(baseUrl, "user@pam!t=secret");
@@ -293,6 +293,7 @@ class ProxmoxHttpClientTest {
         client.get("things").param("type", "vm").execute();
         client.delete("things").param("purge", "1").execute();
         client.post("things").execute();
+        client.patch("things").execute();
 
         assertThat(requestHeaders.get(0).get(":query")).isEqualTo("type=vm");
         assertThat(requestHeaders.get(1).get(":query")).isEqualTo("purge=1");
@@ -300,6 +301,7 @@ class ProxmoxHttpClientTest {
         assertThat(requestHeaders.get(2).get(":query")).isEqualTo("null");
         assertThat(requestHeaders.get(2).get(":body")).isEqualTo("{}");
         assertThat(requestHeaders.get(2).get("content-type")).isEqualTo("application/json");
+        assertThat(requestHeaders.get(3).get(":body")).isEmpty();
     }
 
     @Test

@@ -467,7 +467,9 @@ public class ProxmoxHttpClient {
                 case "GET" -> requestBuilder.GET();
                 case "POST" -> requestBuilder.POST(HttpRequest.BodyPublishers.ofString(requestBody));
                 case "PUT" -> requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(requestBody));
-                case "PATCH" -> requestBuilder.method("PATCH", HttpRequest.BodyPublishers.ofString(builder.body != null ? builder.body : "{}"));
+                // pveproxy rejects a body on any method other than POST and PUT
+                case "PATCH" -> requestBuilder.method("PATCH", builder.body != null
+                        ? HttpRequest.BodyPublishers.ofString(builder.body) : HttpRequest.BodyPublishers.noBody());
                 case "DELETE" -> requestBuilder.DELETE();
             }
 
